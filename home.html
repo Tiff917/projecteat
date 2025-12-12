@@ -2,518 +2,85 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gourmet App with Profile</title>
-    <style>
-        /* --- 1. 基礎設定 --- */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-        }
-
-        :root {
-            --bg-color: #F2EBE0;       
-            --primary-brown: #8D6E63;  
-            --text-dark: #5D4037;
-            --text-light: #9E9E9E;      
-        }
-
-        body {
-            background-color: #e0e0e0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* --- 2. 手機外框 --- */
-        .phone-frame {
-            width: 375px;
-            height: 740px;
-            background-color: var(--bg-color);
-            border-radius: 44px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
-            position: relative;
-            overflow: hidden;
-            border: 8px solid #222;
-        }
-
-        /* --- 3. 狀態列 (層級最高，永遠在最上面) --- */
-        .status-bar {
-            position: absolute; top: 0; left: 0; width: 100%; height: 44px;
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0 25px; 
-            z-index: 500; /* 確保蓋過個人頁面 */
-            font-size: 14px; font-weight: 600; color: #000;
-            pointer-events: none; /* 讓點擊穿透 */
-        }
-        .dynamic-island {
-            position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
-            width: 120px; height: 35px; background-color: #000; border-radius: 20px;
-        }
-        .status-icons { display: flex; gap: 5px; }
-
-        /* --- 4. 主畫面導航列 --- */
-        .top-bar {
-            position: absolute; top: 90px; left: 0; width: 100%;
-            padding: 0 20px;
-            display: flex; justify-content: space-between; align-items: center;
-            z-index: 100; pointer-events: none;
-            transition: opacity 0.3s;
-        }
-        .bottom-bar {
-            position: absolute; bottom: 60px; left: 0; width: 100%;
-            padding: 0 40px;
-            display: flex; justify-content: space-between; align-items: center;
-            z-index: 100; pointer-events: none;
-            transition: opacity 0.3s;
-        }
-
-        .btn-container {
-            pointer-events: auto; cursor: pointer;
-            transition: transform 0.1s;
-            display: flex; justify-content: center; align-items: center;
-        }
-        .btn-container:active { transform: scale(0.92); }
-
-        /* Icon 樣式 */
-        .avatar { width: 48px; height: 48px; background-color: #947867; border-radius: 50%; }
-        .search-pill {
-            flex: 1; margin: 0 15px; height: 48px; background-color: #947867; border-radius: 24px;
-            display: flex; justify-content: flex-start; align-items: center; padding-left: 15px;
-        }
-        .notification, .shutter-btn { background-color: #947867; border-radius: 50%; }
-        .notification { width: 48px; height: 48px; }
-        .shutter-btn {
-            width: 76px; height: 76px; border: 4px solid #F2EBE0;
-            box-shadow: 0 8px 15px rgba(148, 120, 103, 0.4), inset 0 0 0 3px #F2EBE0;
-        }
-        
-        /* SVG 通用設定 */
-        svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-        .icon-white svg { stroke: white; stroke-width: 2; }
-        .icon-brown svg { stroke: #947867; stroke-width: 2.5; }
-
-        /* --- 5. 頁面滑動軌道 --- */
-        .carousel-track {
-            display: flex; width: 300%; height: 100%;
-            transform: translateX(-33.333%);
-            z-index: 1;
-        }
-        .page {
-            width: 33.333%; height: 100%; flex-shrink: 0; position: relative;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-        }
-        
-        /* 卡片與遮罩 */
-        .card {
-            width: 320px; height: 380px; background-color: #ddd; border-radius: 35px;
-            background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80');
-            background-size: cover; background-position: center;
-            box-shadow: 0 15px 30px rgba(93, 64, 55, 0.15);
-            position: relative; overflow: hidden;
-        }
-        .card::before {
-            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(30, 30, 30, 0.6); z-index: 2;
-        }
-
-        /* --- 6. 新增：個人頁面 (Profile Page) --- */
-        .profile-page {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--bg-color);
-            z-index: 300; /* 比主頁高，但在 Status Bar 下 */
-            transform: translateX(-100%); /* 預設藏在左邊 */
-            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-            display: flex; flex-direction: column;
-            padding: 45px 30px 40px 30px; /* 避開動態島 */
-        }
-
-        .profile-page.active {
-            transform: translateX(0); /* 滑入 */
-        }
-
-        /* 個人頁面內容 */
-        .back-btn {
-            width: 40px; height: 40px;
-            background-color: #D7CCC8; /* 淺褐色背景 */
-            border-radius: 50%;
-            display: flex; justify-content: center; align-items: center;
-            cursor: pointer; margin-bottom: 20px;
-        }
-
-        .profile-header {
-            display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;
-        }
-        .profile-avatar {
-            width: 100px; height: 100px; background-color: #fff; border-radius: 50%;
-            margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-        .profile-name { font-size: 22px; font-weight: bold; color: var(--text-dark); letter-spacing: 1px; }
-        .profile-email { font-size: 14px; color: var(--text-dark); opacity: 0.6; margin-top: 5px; }
-
-        .profile-menu { display: flex; flex-direction: column; gap: 25px; width: 100%; }
-        .menu-item {
-            display: flex; align-items: center;
-            font-size: 16px; color: var(--text-dark); font-weight: 500; cursor: pointer;
-        }
-        .menu-icon { width: 24px; margin-right: 20px; text-align: center; color: #8D6E63; }
-        
-        .logout-btn {
-            margin-top: auto; /* 推到底部 */
-            width: 100%; height: 50px;
-            background-color: #C1B0A4;
-            color: white; border: none; border-radius: 15px;
-            font-size: 16px; font-weight: bold; cursor: pointer;
-        }
-
-        /* --- 7. Action Sheet --- */
-        .modal-backdrop {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: opacity 0.3s;
-            z-index: 400;
-        }
-        .modal-backdrop.active { opacity: 1; pointer-events: auto; }
-
-        .action-sheet {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            background-color: var(--bg-color);
-            border-top-left-radius: 35px; border-top-right-radius: 35px;
-            padding: 10px 25px 30px 25px;
-            transform: translateY(100%); z-index: 450;
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
-            touch-action: none; 
-        }
-        .sheet-handle-area { width: 100%; height: 40px; display: flex; justify-content: center; align-items: center; }
-        .sheet-handle { width: 50px; height: 5px; background-color: #D7CCC8; border-radius: 10px; }
-        .sheet-option { display: flex; align-items: center; padding: 18px 0; border-bottom: 1px solid #E0D4C8; color: var(--text-dark); font-weight: 600; }
-        .sheet-option:last-child { border-bottom: none; }
-        .sheet-option svg { width: 24px; height: 24px; margin-right: 15px; stroke: var(--primary-brown); }
-
-        .home-indicator {
-            position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
-            width: 130px; height: 5px; background-color: #000; border-radius: 3px; z-index: 500;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Gourmet App</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="phone-frame">
-        
-        <div class="status-bar">
-            <div class="time">9:41</div>
-            <div class="dynamic-island"></div>
-            <div class="status-icons">
-                <svg width="18" height="12" viewBox="0 0 18 12" fill="black"><path d="M1 10h2v2H1zm4-3h2v5H5zm4-3h2v8H9zm4-3h2v11h-2z"/></svg>
-                <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="black" stroke-width="1.5"><rect x="1" y="1" width="18" height="10" rx="2" /><path d="M20 4v4" /><rect x="3" y="3" width="14" height="6" fill="black" rx="1"/></svg>
-            </div>
+    <div class="profile-page" id="profilePage">
+        <div class="back-btn" id="closeProfileBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M15 18l-6-6 6-6" /></svg>
         </div>
-
-        <div class="profile-page" id="profilePage">
-            <div class="back-btn" id="closeProfileBtn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
-                    <path d="M15 18l-6-6 6-6" />
-                </svg>
-            </div>
-
-            <div class="profile-header">
-                <div class="profile-avatar"></div>
-                <div class="profile-name">T T T T T</div>
-                <div class="profile-email">YYYT.gmail.com</div>
-            </div>
-
-            <div class="profile-menu">
-                <div class="menu-item">
-                    <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-                    <span>My Profile</span>
-                </div>
-                <div class="menu-item">
-                    <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-                    <span>Subscription</span>
-                </div>
-                <div class="menu-item">
-                    <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-                    <span>Address</span>
-                </div>
-                <div class="menu-item">
-                    <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
-                    <span>Contact Us</span>
-                </div>
-                <div class="menu-item">
-                    <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
-                    <span>Setting</span>
-                </div>
-                <div class="menu-item">
-                    <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-                    <span>Help&QA</span>
-                </div>
-            </div>
-
-            <button class="logout-btn">Log Out</button>
+        <div class="profile-header">
+            <div class="profile-avatar"></div>
+            <div class="profile-name">T T T T T</div>
+            <div class="profile-email">YYYT.gmail.com</div>
         </div>
-
-        <div class="top-bar" id="topBar">
-            <div class="btn-container avatar" id="openProfileBtn"></div>
-
-            <div class="btn-container search-pill icon-white">
-                <svg width="24" height="24" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" /></svg>
-            </div>
-            <div class="btn-container notification icon-white">
-                <svg width="22" height="22" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg>
-            </div>
+        <div class="profile-menu">
+            <div class="menu-item"><span>My Profile</span></div>
+            <div class="menu-item"><span>Subscription</span></div>
+            <div class="menu-item"><span>Address</span></div>
+            <div class="menu-item"><span>Contact Us</span></div>
+            <div class="menu-item"><span>Setting</span></div>
         </div>
-
-        <div class="bottom-bar" id="bottomBar">
-            <div class="btn-container icon-brown">
-                <svg width="34" height="34" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7" /><line x1="16" y1="16" x2="22" y2="22" /></svg>
-            </div>
-            <div class="btn-container shutter-btn" id="shutterBtn"></div>
-            <div class="btn-container icon-brown">
-                <svg width="30" height="30" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
-            </div>
-        </div>
-
-        <div class="carousel-track" id="track">
-            <div class="page memory"><h2 style="color: #5D4037;">Memory</h2></div>
-            <div class="page home"><div class="card"></div></div>
-            <div class="page community"><h2 style="color: #5D4037;">VIP Community</h2></div>
-        </div>
-
-        <div class="modal-backdrop" id="backdrop"></div>
-        <div class="action-sheet" id="actionSheet">
-            <div class="sheet-handle-area"><div class="sheet-handle"></div></div>
-            <div class="sheet-option"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>立即拍照</span></div>
-            <div class="sheet-option"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>從相簿中選擇</span></div>
-        </div>
-
-        <div class="home-indicator"></div>
+        <button class="logout-btn">Log Out</button>
     </div>
 
-    <script>
-    // --- 核心變數 ---
-    const track = document.getElementById('track');
-    const shutterBtn = document.getElementById('shutterBtn');
-    const actionSheet = document.getElementById('actionSheet');
-    const backdrop = document.getElementById('backdrop');
-    const topBar = document.getElementById('topBar');
-    const bottomBar = document.getElementById('bottomBar');
-    const logoutBtn = document.querySelector('.logout-btn');
+    <div class="top-bar" id="topBar">
+        <div class="btn-container avatar" id="openProfileBtn"></div>
+        <div class="btn-container search-pill icon-white">
+            <svg width="24" height="24" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" /></svg>
+        </div>
+        <div class="btn-container notification icon-white">
+            <svg width="22" height="22" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg>
+        </div>
+    </div>
 
-    // 個人頁面變數
-    const profilePage = document.getElementById('profilePage');
-    const openProfileBtn = document.getElementById('openProfileBtn');
-    const closeProfileBtn = document.getElementById('closeProfileBtn');
-
-    // 頁面滑動狀態變數
-    let currentPage = 1;
-    let startX = 0; let startY = 0;
-    let currentTranslate = -33.333;
-    let isDraggingPage = false;
-    let startTranslate = 0;
-    let isHorizontalMove = false;
-
-    // Action Sheet 變數
-    let sheetStartY = 0; let isDraggingSheet = false;
-
-    // ==========================================
-    // 1. 個人頁面開關 & 登出
-    // ==========================================
-    openProfileBtn.addEventListener('click', () => {
-        profilePage.classList.add('active');
-    });
-
-    closeProfileBtn.addEventListener('click', () => {
-        profilePage.classList.remove('active');
-    });
-
-    logoutBtn.addEventListener('click', () => {
-        window.location.href = 'login.html'; 
-    });
-
-    // ==========================================
-    // 2. 頁面左右滑動邏輯 (優化版)
-    // ==========================================
-    // 只監聽開始，移動和結束綁定到 window 以防脫離軌道
-    track.addEventListener('mousedown', pageDragStart);
-    track.addEventListener('touchstart', pageDragStart);
-
-    function pageDragStart(e) {
-        // 如果正在拖曳選單，就不要觸發頁面滑動
-        if (isDraggingSheet) return;
-
-        isDraggingPage = true; 
-        isHorizontalMove = false; // 重置方向判斷
-        startX = getX(e); 
-        startY = getY(e);
-        startTranslate = -currentPage * 33.333;
+    <div class="carousel-track" id="track">
         
-        // 移除過渡動畫，確保拖曳時跟手
-        track.style.transition = 'none';
+        <div class="page-container" id="page-memory">
+            <div class="loading-text">Loading Memory...</div>
+        </div>
 
-        // 綁定全域事件，防止滑太快游標跑出範圍導致亂跳
-        window.addEventListener('mousemove', pageDragMove);
-        window.addEventListener('touchmove', pageDragMove, {passive: false});
-        window.addEventListener('mouseup', pageDragEnd);
-        window.addEventListener('touchend', pageDragEnd);
-    }
+        <div class="page-container" id="page-home">
+            <div class="card"></div>
+        </div>
 
-    function pageDragMove(e) {
-        if (!isDraggingPage) return;
+        <div class="page-container" id="page-community">
+             <div class="loading-text">Loading Community...</div>
+        </div>
+
+    </div>
+
+    <div class="bottom-bar" id="bottomBar">
+        <div class="btn-container icon-brown">
+            <svg width="34" height="34" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7" /><line x1="16" y1="16" x2="22" y2="22" /></svg>
+        </div>
+        <div class="btn-container shutter-btn" id="shutterBtn"></div>
+        <div class="btn-container icon-brown">
+            <svg width="30" height="30" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
+        </div>
+    </div>
+
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
+
+<input type="file" id="albumInput" accept="image/*" style="display: none;">
+
+    <div class="action-sheet" id="actionSheet">
+        <div class="sheet-handle-area"><div class="sheet-handle"></div></div>
         
-        const currentX = getX(e);
-        const currentY = getY(e);
-        const deltaX = currentX - startX;
-        const deltaY = currentY - startY;
-
-        // --- 方向鎖定邏輯 ---
-        // 門檻從 5 提高到 10，避免微小抖動觸發
-        if (!isHorizontalMove && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
-            // 如果 X 軸移動明顯大於 Y 軸，才認定是橫向滑動
-            if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                isHorizontalMove = true;
-            } else {
-                // 認定為垂直滑動，取消頁面拖曳，讓瀏覽器處理滾動
-                isDraggingPage = false; 
-                pageDragEnd(e); // 清理監聽
-                return; 
-            }
-        }
-
-        // 只有被認定為橫向滑動後，才開始移動 DOM
-        if (isHorizontalMove) {
-            if(e.cancelable) e.preventDefault(); // 防止瀏覽器上一頁/下一頁手勢
-            
-            // 計算移動百分比 (假設容器寬約 375px)
-            const movePercent = (deltaX / 375) * 33.333;
-            let nextTranslate = startTranslate + movePercent;
-
-            // 增加阻力 (Elasticity)：如果滑到第一頁最左或最後頁最右，增加阻力
-            if (nextTranslate > 0 || nextTranslate < -66.666) {
-                nextTranslate = startTranslate + (movePercent * 0.3);
-            }
-
-            currentTranslate = nextTranslate;
-            track.style.transform = `translateX(${currentTranslate}%)`;
-        }
-    }
-
-    function pageDragEnd(e) {
-        if (!isDraggingPage && !isHorizontalMove) {
-            // 如果只是點擊沒有拖曳，也要清理事件
-            cleanupPageDrag();
-            return;
-        }
-
-        isDraggingPage = false;
+        <div class="sheet-option" id="takePhotoBtn">
+            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>立即拍照</span>
+        </div>
         
-        // 計算總移動量
-        const movedBy = currentTranslate - startTranslate;
+        <div class="sheet-option" id="chooseAlbumBtn">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>從相簿中選擇</span>
+        </div>
+    </div>
 
-        // --- 切換邏輯優化 ---
-        // 門檻提高到 5% (原本約 3%)，避免太容易誤觸換頁
-        const threshold = 5; 
-
-        if (movedBy < -threshold && currentPage < 2) {
-            currentPage++; // 向左滑，下一頁
-        } else if (movedBy > threshold && currentPage > 0) {
-            currentPage--; // 向右滑，上一頁
-        }
-
-        updateCarousel();
-        cleanupPageDrag();
-    }
-
-    function cleanupPageDrag() {
-        // 移除全域監聽
-        window.removeEventListener('mousemove', pageDragMove);
-        window.removeEventListener('touchmove', pageDragMove);
-        window.removeEventListener('mouseup', pageDragEnd);
-        window.removeEventListener('touchend', pageDragEnd);
-    }
-
-    function updateCarousel() {
-        track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-        track.style.transform = `translateX(-${currentPage * 33.333}%)`;
-        
-        const opacity = (currentPage === 1) ? '1' : '0';
-        topBar.style.opacity = opacity;
-        bottomBar.style.opacity = opacity;
-    }
-
-    // ==========================================
-    // 3. Action Sheet 邏輯 (下滑收起)
-    // ==========================================
-    shutterBtn.addEventListener('click', () => {
-        actionSheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-        actionSheet.style.transform = 'translateY(0)';
-        backdrop.classList.add('active');
-    });
-
-    backdrop.addEventListener('click', closeSheet);
-
-    function closeSheet() {
-        actionSheet.style.transition = 'transform 0.3s ease-out';
-        actionSheet.style.transform = 'translateY(100%)';
-        backdrop.classList.remove('active');
-    }
-
-    // 綁定 Action Sheet 拖曳事件
-    actionSheet.addEventListener('mousedown', sheetDragStart);
-    actionSheet.addEventListener('touchstart', sheetDragStart);
-
-    function sheetDragStart(e) {
-        isDraggingSheet = true; 
-        sheetStartY = getY(e);
-        actionSheet.style.transition = 'none';
-
-        // 也是綁定到 window 確保不卡住
-        window.addEventListener('mousemove', sheetDragMove);
-        window.addEventListener('touchmove', sheetDragMove, {passive: false});
-        window.addEventListener('mouseup', sheetDragEnd);
-        window.addEventListener('touchend', sheetDragEnd);
-    }
-
-    function sheetDragMove(e) {
-        if (!isDraggingSheet) return;
-        let currentY = getY(e);
-        let deltaY = currentY - sheetStartY;
-
-        if (deltaY > 0) {
-            if(e.cancelable) e.preventDefault();
-            actionSheet.style.transform = `translateY(${deltaY}px)`;
-        }
-    }
-
-    function sheetDragEnd(e) {
-        if (!isDraggingSheet) return;
-        isDraggingSheet = false;
-        
-        window.removeEventListener('mousemove', sheetDragMove);
-        window.removeEventListener('touchmove', sheetDragMove);
-        window.removeEventListener('mouseup', sheetDragEnd);
-        window.removeEventListener('touchend', sheetDragEnd);
-        
-        let endY = e.changedTouches ? e.changedTouches[0].clientY : getY(e);
-        let deltaY = endY - sheetStartY;
-
-        if (deltaY > 100) {
-            closeSheet();
-        } else {
-            actionSheet.style.transition = 'transform 0.4s cubic-bezier(0.25, 1.5, 0.5, 1)';
-            actionSheet.style.transform = 'translateY(0)';
-        }
-    }
-
-    // ==========================================
-    // 4. 輔助函數
-    // ==========================================
-    function getX(e) { return e.type.includes('mouse') ? e.pageX : e.touches[0].clientX; }
-    function getY(e) { return e.type.includes('mouse') ? e.pageY : e.touches[0].clientY; }
-</script>
+    <script src="main.js"></script>
 </body>
 </html>
