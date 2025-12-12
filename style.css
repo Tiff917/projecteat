@@ -506,3 +506,18 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* 確保有這一段，時間軸頁面才能滑上來 */
+.editor-page {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: var(--bg-color);
+    z-index: 600; 
+    transform: translateY(100%); /* 預設藏在下面 */
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: flex; flex-direction: column;
+}
+
+/* 這一行最重要，沒有它就滑不上來 */
+.editor-page.active { 
+    transform: translateY(0); 
+}
