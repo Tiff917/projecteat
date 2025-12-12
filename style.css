@@ -329,3 +329,142 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
     margin-top: calc( (var(--card-size) / 2) + 30px );
     transform: translate(-50%, 0);
 }
+
+.calendar-container {
+    width: 90%;
+    max-width: 350px;
+    background: transparent;
+    margin: 0 auto; /* 確保置中 */
+}
+
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: #000;
+    margin-bottom: 15px;
+}
+
+.days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px; /* 日期之間的間距 */
+    row-gap: 20px;
+}
+
+.day-cell {
+    width: 100%;
+    aspect-ratio: 1/1; /* 強制正方形 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    color: #9E9E9E;
+    border-radius: 50%; /* 圓形 */
+    position: relative;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+/* 當這一天有照片時的樣式 */
+.day-cell.has-photo {
+    background-size: cover;
+    background-position: center;
+    color: white; /* 有照片時文字變白 */
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* 今天的日期標記 (選填) */
+.day-cell.today {
+    color: #8D6E63;
+    font-weight: bold;
+}
+
+/* --- 編輯頁面 (Editor Page) --- */
+.editor-page {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: var(--bg-color);
+    z-index: 600; /* 比所有東西都高 */
+    transform: translateY(100%); /* 預設藏在下面 */
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: flex; flex-direction: column;
+}
+.editor-page.active { transform: translateY(0); }
+
+/* 頂部導航 */
+.editor-header {
+    height: 50px;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 20px;
+    margin-top: max(10px, env(safe-area-inset-top)); /* 避開瀏海 */
+}
+.header-btn { font-size: 16px; font-weight: 500; color: var(--text-dark); cursor: pointer; }
+.header-title { font-weight: bold; font-size: 17px; }
+.next-btn { color: #8D6E63; font-weight: 700; }
+
+/* 預覽區 (上半部) */
+.preview-area {
+    width: 100%;
+    height: 45vh; /* 佔螢幕高度 45% */
+    background-color: #ddd;
+    background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c'); /* 預設圖 */
+    background-size: cover; background-position: center;
+    transition: background-image 0.2s;
+}
+
+/* 工具列 (中間黑色膠囊區) */
+.editor-tools-bar {
+    display: flex; align-items: center;
+    padding: 10px 15px;
+    background-color: var(--bg-color);
+    gap: 10px;
+}
+.tool-capsule {
+    height: 36px;
+    background-color: rgba(93, 64, 55, 0.1); /* 淺褐色背景 */
+    border-radius: 18px;
+    display: flex; justify-content: center; align-items: center;
+    padding: 0 12px; cursor: pointer;
+    color: var(--text-dark);
+}
+.tool-capsule.right {
+    margin-left: auto; /* 推到最右邊 */
+    background-color: rgba(93, 64, 55, 0.8); /* 深色背景 */
+    color: white;
+    font-size: 12px; font-weight: bold;
+    gap: 6px;
+}
+
+/* 圖庫區 (下方可滾動網格) */
+.gallery-grid {
+    flex: 1; /* 填滿剩下的空間 */
+    background-color: #fff;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 一排 4 張 */
+    gap: 2px;
+    overflow-y: auto;
+    padding-top: 2px;
+}
+.gallery-item {
+    width: 100%;
+    aspect-ratio: 1/1; /* 正方形 */
+    background-color: #eee;
+    background-size: cover; background-position: center;
+    cursor: pointer;
+    position: relative;
+}
+/* 選中時的遮罩 */
+.gallery-item.selected::after {
+    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(255,255,255,0.5);
+    border: 3px solid #8D6E63; box-sizing: border-box;
+}
+
+/* 第一格：開相機 */
+.camera-roll-trigger {
+    background-color: #ccc;
+    display: flex; justify-content: center; align-items: center;
+}
