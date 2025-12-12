@@ -49,8 +49,8 @@ let isDraggingSheet = false;
 
 // 資料庫變數
 let db;
-// ⚠️ 改名強制重置資料庫，避免舊資料干擾
-const DB_NAME = 'GourmetDB_Fixed_v5'; 
+// ⚠️ 強制換新資料庫 v6，清除舊的錯誤資料
+const DB_NAME = 'GourmetDB_Final_v6'; 
 const STORE_NAME = 'photos';
 const DB_VERSION = 1;
 
@@ -67,44 +67,48 @@ function initDB() {
         if (db.objectStoreNames.contains(STORE_NAME)) {
             db.deleteObjectStore(STORE_NAME);
         }
-        // 使用 id 自增鍵值，支援同一天無限張照片
+        // 使用 autoIncrement: true 確保多圖存入
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
         store.createIndex('date', 'date', { unique: false });
     };
 
     request.onsuccess = (e) => {
         db = e.target.result;
-        console.log("資料庫連線成功 (v5)");
+        console.log("資料庫連線成功 (v6)");
         renderCalendar();
     };
 }
 initDB();
 
 // ==========================================
-// 3. 動態載入頁面
+// 3. 動態載入頁面 (防止重複載入)
 // ==========================================
 async function loadExternalPages() {
     try {
+        // 載入 Memory
         const memoryRes = await fetch('memory.html');
         if (memoryRes.ok) {
             const text = await memoryRes.text();
             const doc = new DOMParser().parseFromString(text, 'text/html');
             const content = doc.querySelector('.page-content-wrapper');
-            if(content) {
-                const container = document.getElementById('page-memory');
-                container.innerHTML = ''; // 清空 Loading
+            const container = document.getElementById('page-memory');
+            
+            if(content && container) {
+                container.innerHTML = ''; // ⚠️ 這裡很重要：先清空再塞入
                 container.appendChild(content);
-                renderCalendar(); // 載入後繪製日曆
+                renderCalendar(); 
             }
         }
+        // 載入 Community
         const communityRes = await fetch('community.html');
         if (communityRes.ok) {
             const text = await communityRes.text();
             const doc = new DOMParser().parseFromString(text, 'text/html');
             const content = doc.querySelector('.page-content-wrapper');
-            if(content) {
-                const container = document.getElementById('page-community');
-                container.innerHTML = '';
+            const container = document.getElementById('page-community');
+
+            if(content && container) {
+                container.innerHTML = ''; // ⚠️ 先清空
                 container.appendChild(content);
             }
         }
@@ -115,13 +119,13 @@ async function loadExternalPages() {
 loadExternalPages();
 
 // ==========================================
-// 4. 繪製日曆 (只畫一次)
+// 4. 繪製日曆 (解決重複問題)
 // ==========================================
 async function renderCalendar() {
     const calendarContainer = document.getElementById('calendarDays');
     if (!calendarContainer) return; 
 
-    // ⚠️ 關鍵：繪製前徹底清空容器，防止重複堆疊
+    // ⚠️ 終極防禦：繪製前徹底清空容器，防止日曆疊加
     calendarContainer.innerHTML = ''; 
 
     const date = new Date();
@@ -156,14 +160,14 @@ async function renderCalendar() {
         if (photosGroup[dateString] && photosGroup[dateString].length > 0) {
             dayCell.classList.add('has-photo');
             
-            // 日曆格子只顯示「最後一張」當代表
+            // 拿「最後一張」當封面
             const lastPhoto = photosGroup[dateString][photosGroup[dateString].length - 1];
             const imgUrl = URL.createObjectURL(lastPhoto.imageBlob);
             
             dayCell.style.backgroundImage = `url('${imgUrl}')`;
             dayCell.textContent = ''; 
 
-            // 點擊後打開列表，顯示當天「所有」照片
+            // 點擊事件
             dayCell.onclick = () => {
                 openTimeline(dateString, photosGroup[dateString]);
             };
@@ -195,7 +199,7 @@ function getAllPhotosGrouped() {
 }
 
 // ==========================================
-// 5. ⚠️ 關鍵修正：批次上傳邏輯
+// 5. 批次上傳邏輯 (解決多圖只存一張的問題)
 // ==========================================
 function handleBatchUpload(files) {
     if (!files || files.length === 0) return;
@@ -204,13 +208,11 @@ function handleBatchUpload(files) {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
 
-    // 開啟一次交易
     const transaction = db.transaction([STORE_NAME], 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
 
-    // 迴圈寫入資料庫 (不更新UI)
+    // 迴圈寫入資料庫
     Array.from(files).forEach((file, index) => {
-        // 微調時間，確保排序正確
         const timeOffset = now.getTime() + index;
         const timeStr = new Date(timeOffset).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -222,43 +224,80 @@ function handleBatchUpload(files) {
         });
     });
 
-    // ⚠️ 全部寫完後，才執行這一次
+    // ⚠️ 全部寫完後，才執行這一次 (避免重複畫日曆)
     transaction.oncomplete = () => {
         console.log(`成功存入 ${files.length} 張照片`);
         
-        // 1. 更新首頁卡片 (顯示第一張當代表)
+        // 更新首頁卡片 (顯示第一張當代表)
         const firstImgURL = URL.createObjectURL(files[0]);
         if(card) card.style.backgroundImage = `url('${firstImgURL}')`;
 
-        // 2. 畫日曆 (只畫一次！)
         renderCalendar();
-        
-        // 3. 跳一次通知就好
         alert(`成功儲存 ${files.length} 張照片！`);
     };
 
     transaction.onerror = (e) => {
         console.error("上傳失敗", e);
-        alert("儲存失敗，請重試");
     };
 }
 
-// 單張上傳 (給相機用) 也可以呼叫批次邏輯
-function handleImageUpload(file) {
-    handleBatchUpload([file]);
+// ==========================================
+// 6. 互動與監聽器
+// ==========================================
+function closeSheet() {
+    if(actionSheet && backdrop) {
+        actionSheet.style.transition = 'transform 0.3s ease-out';
+        actionSheet.style.transform = 'translateY(100%)';
+        backdrop.classList.remove('active');
+    }
+}
+
+if(shutterBtn) shutterBtn.addEventListener('click', () => {
+    actionSheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    actionSheet.style.transform = 'translateY(0)';
+    backdrop.classList.add('active');
+});
+if(backdrop) backdrop.addEventListener('click', closeSheet);
+
+// 1. 拍照 (單張)
+if(takePhotoBtn && cameraInput) {
+    takePhotoBtn.addEventListener('click', () => {
+        closeSheet();
+        setTimeout(() => cameraInput.click(), 100);
+    });
+}
+if(cameraInput) {
+    cameraInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if(file) handleBatchUpload([file]); // 統一呼叫批次處理
+    });
+}
+
+// 2. 相簿 (多張)
+if(chooseAlbumBtn && albumInput) {
+    chooseAlbumBtn.addEventListener('click', () => {
+        closeSheet();
+        setTimeout(() => albumInput.click(), 100);
+    });
+}
+if(albumInput) {
+    albumInput.addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            handleBatchUpload(files);
+        }
+    });
 }
 
 // ==========================================
-// 6. 時間軸與編輯頁面
+// 7. 時間軸與編輯頁面
 // ==========================================
 function openTimeline(dateStr, photosArray) {
     if(!timelinePage) return;
-    
     timelinePage.classList.add('active');
     timelineTitle.textContent = dateStr;
     timelineContent.innerHTML = '';
 
-    // 排序：由早到晚
     photosArray.sort((a, b) => a.timestamp - b.timestamp);
 
     photosArray.forEach(photo => {
@@ -269,14 +308,12 @@ function openTimeline(dateStr, photosArray) {
             <div class="timeline-card">
                 <div class="timeline-img" style="background-image: url('${imgUrl}')"></div>
                 <div class="timeline-caption">Time: ${photo.time}</div>
-            </div>
-        `;
+            </div>`;
         timelineContent.appendChild(item);
     });
 }
 if(closeTimelineBtn) closeTimelineBtn.addEventListener('click', () => timelinePage.classList.remove('active'));
 
-// 編輯頁面
 if(editBtn) {
     editBtn.addEventListener('click', () => {
         editorPage.classList.add('active');
@@ -312,56 +349,11 @@ function renderPhotoToGrid(file) {
 }
 
 // ==========================================
-// 7. 互動監聽
+// 8. 頁面滑動邏輯 (保持原樣)
 // ==========================================
-// 關閉選單函式
-function closeSheet() {
-    if(actionSheet && backdrop) {
-        actionSheet.style.transition = 'transform 0.3s ease-out';
-        actionSheet.style.transform = 'translateY(100%)';
-        backdrop.classList.remove('active');
-    }
-}
-
-// 拍照與相簿監聽 (修正版)
-if(shutterBtn) shutterBtn.addEventListener('click', () => {
-    actionSheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-    actionSheet.style.transform = 'translateY(0)';
-    backdrop.classList.add('active');
-});
-if(backdrop) backdrop.addEventListener('click', closeSheet);
-
-// 1. 拍照
-if(takePhotoBtn && cameraInput) {
-    takePhotoBtn.addEventListener('click', () => {
-        closeSheet();
-        setTimeout(() => cameraInput.click(), 100);
-    });
-}
-if(cameraInput) {
-    cameraInput.addEventListener('change', (e) => handleImageUpload(e.target.files[0]));
-}
-
-// 2. 相簿多選 (修正監聽器)
-if(chooseAlbumBtn && albumInput) {
-    chooseAlbumBtn.addEventListener('click', () => {
-        closeSheet();
-        setTimeout(() => albumInput.click(), 100);
-    });
-}
-// ⚠️ 這裡使用新的 handleBatchUpload
-if(albumInput) {
-    albumInput.addEventListener('change', (e) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            handleBatchUpload(files); // 改用批次處理
-        }
-    });
-}
-
-// 頁面滑動與其他雜項
 track.addEventListener('mousedown', pageDragStart);
 track.addEventListener('touchstart', pageDragStart);
+
 function pageDragStart(e) {
     if (isDraggingSheet) return;
     isDraggingPage = true; isHorizontalMove = false;
@@ -373,6 +365,7 @@ function pageDragStart(e) {
     window.addEventListener('mouseup', pageDragEnd);
     window.addEventListener('touchend', pageDragEnd);
 }
+
 function pageDragMove(e) {
     if (!isDraggingPage) return;
     const currentX = getX(e); const currentY = getY(e);
@@ -391,6 +384,7 @@ function pageDragMove(e) {
         track.style.transform = `translateX(${currentTranslate}%)`;
     }
 }
+
 function pageDragEnd(e) {
     if (!isDraggingPage && !isHorizontalMove) { cleanupPageDrag(); return; }
     isDraggingPage = false;
@@ -400,12 +394,14 @@ function pageDragEnd(e) {
     updateCarousel();
     cleanupPageDrag();
 }
+
 function cleanupPageDrag() {
     window.removeEventListener('mousemove', pageDragMove);
     window.removeEventListener('touchmove', pageDragMove);
     window.removeEventListener('mouseup', pageDragEnd);
     window.removeEventListener('touchend', pageDragEnd);
 }
+
 function updateCarousel() {
     track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
     track.style.transform = `translateX(-${currentPage * 33.333}%)`;
@@ -415,6 +411,7 @@ function updateCarousel() {
     topBar.style.pointerEvents = isHome ? 'auto' : 'none';
     bottomBar.style.pointerEvents = isHome ? 'auto' : 'none';
 }
+
 if(openProfileBtn) openProfileBtn.addEventListener('click', () => profilePage.classList.add('active'));
 if(closeProfileBtn) closeProfileBtn.addEventListener('click', () => profilePage.classList.remove('active'));
 if(logoutBtn) logoutBtn.addEventListener('click', () => alert('Log out'));
