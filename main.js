@@ -1,47 +1,70 @@
 // ==========================================
-// 1. 全域變數與 DOM 元素取得
+// 1. 全域變數與 DOM 元素
 // ==========================================
 const track = document.getElementById('track');
 const topBar = document.getElementById('topBar');
 const bottomBar = document.getElementById('bottomBar');
 
-// 個人頁面相關
 const profilePage = document.getElementById('profilePage');
 const openProfileBtn = document.getElementById('openProfileBtn');
 const closeProfileBtn = document.getElementById('closeProfileBtn');
 const logoutBtn = document.querySelector('.logout-btn');
 
-// Action Sheet 相關
 const actionSheet = document.getElementById('actionSheet');
 const backdrop = document.getElementById('backdrop');
 const shutterBtn = document.getElementById('shutterBtn');
 
-// 相機與相簿相關
 const takePhotoBtn = document.getElementById('takePhotoBtn');
 const chooseAlbumBtn = document.getElementById('chooseAlbumBtn');
 const cameraInput = document.getElementById('cameraInput');
 const albumInput = document.getElementById('albumInput');
-const card = document.querySelector('.card'); // 要更換背景的卡片
+const card = document.querySelector('.card');
 
 // 狀態變數
-let currentPage = 1; // 0: Memory, 1: Home, 2: Community
-let startX = 0; 
-let startY = 0;
-let currentTranslate = -33.333; // 初始在中間
+let currentPage = 1;
+let startX = 0; let startY = 0;
+let currentTranslate = -33.333;
 let isDraggingPage = false;
 let startTranslate = 0;
 let isHorizontalMove = false;
-
-// Action Sheet 拖曳變數
 let isDraggingSheet = false;
 let sheetStartY = 0;
 
+// 資料庫變數
+let db;
+const DB_NAME = 'GourmetDB';
+const STORE_NAME = 'photos';
+
 // ==========================================
-// 2. 動態載入頁面內容 (Fetch API)
+// 2. 初始化資料庫 (IndexedDB)
+// ==========================================
+function initDB() {
+    const request = indexedDB.open(DB_NAME, 1);
+    
+    request.onerror = (e) => console.error("DB Error", e);
+    
+    request.onupgradeneeded = (e) => {
+        db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME, { keyPath: 'date' });
+        }
+    };
+
+    request.onsuccess = (e) => {
+        db = e.target.result;
+        console.log("資料庫連線成功");
+        // 如果資料庫準備好了，嘗試畫一次日曆 (確保切換頁面時有資料)
+        renderCalendar();
+    };
+}
+initDB();
+
+// ==========================================
+// 3. 動態載入頁面 & 確保日曆繪製
 // ==========================================
 async function loadExternalPages() {
     try {
-        // 載入 Memory (左頁)
+        // 載入 Memory
         const memoryRes = await fetch('memory.html');
         if (memoryRes.ok) {
             const text = await memoryRes.text();
@@ -51,10 +74,14 @@ async function loadExternalPages() {
                 const container = document.getElementById('page-memory');
                 container.innerHTML = ''; 
                 container.appendChild(content);
+                
+                // ⚠️ 關鍵修正：HTML 塞進去後，立刻畫日曆
+                console.log("Memory 頁面載入完成，開始繪製日曆...");
+                renderCalendar();
             }
         }
 
-        // 載入 Community (右頁)
+        // 載入 Community
         const communityRes = await fetch('community.html');
         if (communityRes.ok) {
             const text = await communityRes.text();
@@ -67,31 +94,131 @@ async function loadExternalPages() {
             }
         }
     } catch (error) {
-        console.error('頁面載入失敗 (請確認是否使用 Local Server):', error);
+        console.error('頁面載入失敗:', error);
     }
 }
-
-// 執行載入
 loadExternalPages();
 
 // ==========================================
-// 3. 左右滑動邏輯 (Carousel Swipe)
+// 4. 繪製日曆核心邏輯 (Render Calendar)
+// ==========================================
+async function renderCalendar() {
+    const calendarContainer = document.getElementById('calendarDays');
+    // 如果找不到容器 (HTML還沒載入)，就先離開，等 loadExternalPages 呼叫
+    if (!calendarContainer) return; 
+
+    calendarContainer.innerHTML = ''; // 清空
+
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = date.getMonth(); 
+
+    // 設定月份標題
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const title = document.getElementById('calendarMonth');
+    if(title) title.textContent = `${monthNames[month]} ${year}`;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // 取得資料庫所有照片
+    const photosMap = await getAllPhotosMap();
+
+    // 空白格
+    for (let i = 0; i < firstDay; i++) {
+        calendarContainer.appendChild(document.createElement('div'));
+    }
+
+    // 日期格
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayCell = document.createElement('div');
+        dayCell.classList.add('day-cell');
+        dayCell.textContent = day;
+
+        // 組成 YYYY-MM-DD
+        const currentMonthStr = (month + 1).toString().padStart(2, '0');
+        const currentDayStr = day.toString().padStart(2, '0');
+        const dateString = `${year}-${currentMonthStr}-${currentDayStr}`;
+
+        // 如果這天有照片
+        if (photosMap[dateString]) {
+            dayCell.classList.add('has-photo');
+            const imgUrl = URL.createObjectURL(photosMap[dateString]);
+            dayCell.style.backgroundImage = `url('${imgUrl}')`;
+            dayCell.textContent = ''; // 有照片就不顯示數字 (或保留看你喜好)
+            
+            // 點擊事件：換首頁圖
+            dayCell.onclick = () => {
+                card.style.backgroundImage = `url('${imgUrl}')`;
+                // 自動滑回首頁
+                currentTranslate = -33.333;
+                currentPage = 1;
+                updateCarousel();
+            };
+        }
+        calendarContainer.appendChild(dayCell);
+    }
+}
+
+function getAllPhotosMap() {
+    return new Promise((resolve) => {
+        if (!db) { resolve({}); return; }
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = (e) => {
+            const results = e.target.result;
+            const map = {};
+            if(results){
+                results.forEach(item => { map[item.date] = item.imageBlob; });
+            }
+            resolve(map);
+        };
+    });
+}
+
+// ==========================================
+// 5. 圖片處理 (存入 DB + 預覽)
+// ==========================================
+function handleImageUpload(file) {
+    if (!file) return;
+
+    // 1. 預覽
+    const imageURL = URL.createObjectURL(file);
+    card.style.backgroundImage = `url('${imageURL}')`;
+
+    // 2. 存入 DB
+    if (!db) return;
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.put({
+        date: today,
+        imageBlob: file
+    });
+
+    request.onsuccess = () => {
+        console.log("照片已存檔:", today);
+        renderCalendar(); // 存完後立刻重畫日曆
+        alert("照片已記錄到今天的回憶中！");
+    };
+}
+
+
+// ==========================================
+// 6. 滑動與 UI 互動邏輯 (保持原本)
 // ==========================================
 track.addEventListener('mousedown', pageDragStart);
 track.addEventListener('touchstart', pageDragStart);
 
 function pageDragStart(e) {
-    // 如果正在拖曳 Action Sheet，就不觸發頁面滑動
-    if (isDraggingSheet) return; 
-
+    if (isDraggingSheet) return;
     isDraggingPage = true; 
     isHorizontalMove = false;
-    startX = getX(e); 
-    startY = getY(e);
+    startX = getX(e); startY = getY(e);
     startTranslate = -currentPage * 33.333;
-    
     track.style.transition = 'none';
-
     window.addEventListener('mousemove', pageDragMove);
     window.addEventListener('touchmove', pageDragMove, {passive: false});
     window.addEventListener('mouseup', pageDragEnd);
@@ -100,56 +227,30 @@ function pageDragStart(e) {
 
 function pageDragMove(e) {
     if (!isDraggingPage) return;
-    
-    const currentX = getX(e);
-    const currentY = getY(e);
-    const deltaX = currentX - startX;
-    const deltaY = currentY - startY;
-
-    // 判斷是否為橫向滑動 (X軸移動 > 10 且 > Y軸移動)
+    const currentX = getX(e); const currentY = getY(e);
+    const deltaX = currentX - startX; const deltaY = currentY - startY;
     if (!isHorizontalMove && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-            isHorizontalMove = true;
-        } else {
-            isDraggingPage = false; 
-            pageDragEnd(e);
-            return; 
-        }
+        if (Math.abs(deltaX) > Math.abs(deltaY)) isHorizontalMove = true;
+        else { isDraggingPage = false; pageDragEnd(e); return; }
     }
-
     if (isHorizontalMove) {
         if(e.cancelable) e.preventDefault(); 
-        
         const screenWidth = window.innerWidth;
         const movePercent = (deltaX / screenWidth) * 33.333;
         let nextTranslate = startTranslate + movePercent;
-
-        // 邊界阻力 (第一頁往右或最後一頁往左時增加阻力)
-        if (nextTranslate > 0 || nextTranslate < -66.666) {
-            nextTranslate = startTranslate + (movePercent * 0.3);
-        }
-
+        if (nextTranslate > 0 || nextTranslate < -66.666) nextTranslate = startTranslate + (movePercent * 0.3);
         currentTranslate = nextTranslate;
         track.style.transform = `translateX(${currentTranslate}%)`;
     }
 }
 
 function pageDragEnd(e) {
-    if (!isDraggingPage && !isHorizontalMove) {
-        cleanupPageDrag();
-        return;
-    }
-
+    if (!isDraggingPage && !isHorizontalMove) { cleanupPageDrag(); return; }
     isDraggingPage = false;
     const movedBy = currentTranslate - startTranslate;
     const threshold = 5; 
-
-    if (movedBy < -threshold && currentPage < 2) {
-        currentPage++; 
-    } else if (movedBy > threshold && currentPage > 0) {
-        currentPage--; 
-    }
-
+    if (movedBy < -threshold && currentPage < 2) currentPage++; 
+    else if (movedBy > threshold && currentPage > 0) currentPage--; 
     updateCarousel();
     cleanupPageDrag();
 }
@@ -164,8 +265,6 @@ function cleanupPageDrag() {
 function updateCarousel() {
     track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
     track.style.transform = `translateX(-${currentPage * 33.333}%)`;
-    
-    // 如果在非首頁，隱藏 Top/Bottom Bar
     const isHome = (currentPage === 1);
     topBar.style.opacity = isHome ? '1' : '0';
     bottomBar.style.opacity = isHome ? '1' : '0';
@@ -173,72 +272,27 @@ function updateCarousel() {
     bottomBar.style.pointerEvents = isHome ? 'auto' : 'none';
 }
 
-// ==========================================
-// 4. 個人頁面 (Profile) 邏輯
-// ==========================================
+// Action Sheet & Profile
 openProfileBtn.addEventListener('click', () => profilePage.classList.add('active'));
 closeProfileBtn.addEventListener('click', () => profilePage.classList.remove('active'));
 logoutBtn.addEventListener('click', () => alert('Log out clicked'));
 
-
-// ==========================================
-// 5. Action Sheet 邏輯
-// ==========================================
 shutterBtn.addEventListener('click', () => {
     actionSheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
     actionSheet.style.transform = 'translateY(0)';
     backdrop.classList.add('active');
 });
-
-backdrop.addEventListener('click', closeSheet);
-
-function closeSheet() {
+backdrop.addEventListener('click', () => {
     actionSheet.style.transition = 'transform 0.3s ease-out';
     actionSheet.style.transform = 'translateY(100%)';
     backdrop.classList.remove('active');
-}
-
-// ==========================================
-// 6. 相機與相簿功能 (Camera Logic)
-// ==========================================
-
-// --- A. 立即拍照 ---
-takePhotoBtn.addEventListener('click', () => {
-    closeSheet(); // 1. 關閉選單
-    cameraInput.click(); // 2. 觸發隱藏的相機 input
 });
 
-// 當相機拍完照回來時
-cameraInput.addEventListener('change', (e) => {
-    handleImageUpload(e.target.files[0]);
-});
+// Camera Inputs
+takePhotoBtn.addEventListener('click', () => { backdrop.click(); cameraInput.click(); });
+cameraInput.addEventListener('change', (e) => handleImageUpload(e.target.files[0]));
+chooseAlbumBtn.addEventListener('click', () => { backdrop.click(); albumInput.click(); });
+albumInput.addEventListener('change', (e) => handleImageUpload(e.target.files[0]));
 
-// --- B. 從相簿選擇 ---
-chooseAlbumBtn.addEventListener('click', () => {
-    closeSheet(); // 1. 關閉選單
-    albumInput.click(); // 2. 觸發隱藏的相簿 input
-});
-
-// 當選完照片回來時
-albumInput.addEventListener('change', (e) => {
-    handleImageUpload(e.target.files[0]);
-});
-
-// --- C. 處理圖片並顯示在 Card 上 ---
-function handleImageUpload(file) {
-    if (file) {
-        // 建立一個臨時的圖片網址 (Blob URL)
-        const imageURL = URL.createObjectURL(file);
-        
-        // 將卡片的背景圖換成剛剛拍/選的照片
-        card.style.backgroundImage = `url('${imageURL}')`;
-        
-        console.log("照片已載入:", file.name);
-    }
-}
-
-// ==========================================
-// 7. 輔助函式
-// ==========================================
 function getX(e) { return e.type.includes('mouse') ? e.pageX : e.touches[0].clientX; }
 function getY(e) { return e.type.includes('mouse') ? e.pageY : e.touches[0].clientY; }
