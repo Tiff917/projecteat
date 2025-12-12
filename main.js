@@ -50,7 +50,7 @@ let sheetStartY = 0;
 
 // 資料庫變數
 let db;
-const DB_NAME = 'GourmetDB';
+const DB_NAME = 'GourmetDB_v2';
 const STORE_NAME = 'photos';
 const DB_VERSION = 3; // ⚠️ 版本號 3：強制升級資料庫結構以支援多圖
 
