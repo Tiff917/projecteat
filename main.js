@@ -14,7 +14,7 @@ const actionSheet = document.getElementById('actionSheet');
 const backdrop = document.getElementById('backdrop');
 const shutterBtn = document.getElementById('shutterBtn');
 
-// 相機與編輯相關 (請確認 HTML 對應 ID 存在)
+// 相機與編輯相關
 const takePhotoBtn = document.getElementById('takePhotoBtn');
 const chooseAlbumBtn = document.getElementById('chooseAlbumBtn');
 const cameraInput = document.getElementById('cameraInput');
@@ -46,13 +46,13 @@ let isDraggingPage = false;
 let startTranslate = 0;
 let isHorizontalMove = false;
 let isDraggingSheet = false;
-let sheetStartY = 0;
 
 // 資料庫變數
 let db;
-const DB_NAME = 'GourmetDB_v4';
+// ⚠️ 改名強制重置資料庫，避免舊資料干擾
+const DB_NAME = 'GourmetDB_Fixed_v5'; 
 const STORE_NAME = 'photos';
-const DB_VERSION = 1; 
+const DB_VERSION = 1;
 
 // ==========================================
 // 2. 初始化資料庫
@@ -67,13 +67,14 @@ function initDB() {
         if (db.objectStoreNames.contains(STORE_NAME)) {
             db.deleteObjectStore(STORE_NAME);
         }
+        // 使用 id 自增鍵值，支援同一天無限張照片
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
         store.createIndex('date', 'date', { unique: false });
     };
 
     request.onsuccess = (e) => {
         db = e.target.result;
-        console.log("資料庫連線成功");
+        console.log("資料庫連線成功 (v5)");
         renderCalendar();
     };
 }
@@ -84,7 +85,6 @@ initDB();
 // ==========================================
 async function loadExternalPages() {
     try {
-        // Memory
         const memoryRes = await fetch('memory.html');
         if (memoryRes.ok) {
             const text = await memoryRes.text();
@@ -92,12 +92,11 @@ async function loadExternalPages() {
             const content = doc.querySelector('.page-content-wrapper');
             if(content) {
                 const container = document.getElementById('page-memory');
-                container.innerHTML = ''; 
+                container.innerHTML = ''; // 清空 Loading
                 container.appendChild(content);
-                renderCalendar();
+                renderCalendar(); // 載入後繪製日曆
             }
         }
-        // Community
         const communityRes = await fetch('community.html');
         if (communityRes.ok) {
             const text = await communityRes.text();
@@ -116,12 +115,13 @@ async function loadExternalPages() {
 loadExternalPages();
 
 // ==========================================
-// 4. 繪製日曆核心邏輯
+// 4. 繪製日曆 (只畫一次)
 // ==========================================
 async function renderCalendar() {
     const calendarContainer = document.getElementById('calendarDays');
     if (!calendarContainer) return; 
 
+    // ⚠️ 關鍵：繪製前徹底清空容器，防止重複堆疊
     calendarContainer.innerHTML = ''; 
 
     const date = new Date();
@@ -137,10 +137,12 @@ async function renderCalendar() {
 
     const photosGroup = await getAllPhotosGrouped();
 
+    // 空白格
     for (let i = 0; i < firstDay; i++) {
         calendarContainer.appendChild(document.createElement('div'));
     }
 
+    // 日期格
     for (let day = 1; day <= daysInMonth; day++) {
         const dayCell = document.createElement('div');
         dayCell.classList.add('day-cell');
@@ -150,14 +152,18 @@ async function renderCalendar() {
         const currentDayStr = day.toString().padStart(2, '0');
         const dateString = `${year}-${currentMonthStr}-${currentDayStr}`;
 
+        // 如果這天有照片
         if (photosGroup[dateString] && photosGroup[dateString].length > 0) {
             dayCell.classList.add('has-photo');
+            
+            // 日曆格子只顯示「最後一張」當代表
             const lastPhoto = photosGroup[dateString][photosGroup[dateString].length - 1];
             const imgUrl = URL.createObjectURL(lastPhoto.imageBlob);
             
             dayCell.style.backgroundImage = `url('${imgUrl}')`;
             dayCell.textContent = ''; 
 
+            // 點擊後打開列表，顯示當天「所有」照片
             dayCell.onclick = () => {
                 openTimeline(dateString, photosGroup[dateString]);
             };
@@ -166,6 +172,7 @@ async function renderCalendar() {
     }
 }
 
+// 輔助：抓取所有照片並分組
 function getAllPhotosGrouped() {
     return new Promise((resolve) => {
         if (!db) { resolve({}); return; }
@@ -188,24 +195,23 @@ function getAllPhotosGrouped() {
 }
 
 // ==========================================
-// 5. 存入照片邏輯 (支援多張)
+// 5. ⚠️ 關鍵修正：批次上傳邏輯
 // ==========================================
-// 新增：批次上傳照片 (專門解決多圖導致日曆重複的問題)
 function handleBatchUpload(files) {
+    if (!files || files.length === 0) return;
     if (!db) return;
 
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
-    
-    // 開啟一次交易，處理所有照片
+
+    // 開啟一次交易
     const transaction = db.transaction([STORE_NAME], 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
 
-    // 把檔案轉成陣列，跑迴圈存入
+    // 迴圈寫入資料庫 (不更新UI)
     Array.from(files).forEach((file, index) => {
-        // 為了讓時間有點區隔，我們稍微微調每一張的毫秒數
-        // 這樣排序才不會亂掉
-        const timeOffset = now.getTime() + index; 
+        // 微調時間，確保排序正確
+        const timeOffset = now.getTime() + index;
         const timeStr = new Date(timeOffset).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         store.add({
@@ -216,7 +222,7 @@ function handleBatchUpload(files) {
         });
     });
 
-    // ⚠️ 關鍵：等「全部」都存完後，才執行這一次
+    // ⚠️ 全部寫完後，才執行這一次
     transaction.oncomplete = () => {
         console.log(`成功存入 ${files.length} 張照片`);
         
@@ -224,78 +230,51 @@ function handleBatchUpload(files) {
         const firstImgURL = URL.createObjectURL(files[0]);
         if(card) card.style.backgroundImage = `url('${firstImgURL}')`;
 
-        // 2. 重新繪製日曆 (只畫一次！)
+        // 2. 畫日曆 (只畫一次！)
         renderCalendar();
         
-        alert(`已成功儲存 ${files.length} 張照片到回憶中！`);
+        // 3. 跳一次通知就好
+        alert(`成功儲存 ${files.length} 張照片！`);
     };
 
     transaction.onerror = (e) => {
-        console.error("上傳失敗:", e);
+        console.error("上傳失敗", e);
+        alert("儲存失敗，請重試");
     };
 }
 
+// 單張上傳 (給相機用) 也可以呼叫批次邏輯
+function handleImageUpload(file) {
+    handleBatchUpload([file]);
+}
+
 // ==========================================
-// 6. 互動功能與監聽器
+// 6. 時間軸與編輯頁面
 // ==========================================
+function openTimeline(dateStr, photosArray) {
+    if(!timelinePage) return;
+    
+    timelinePage.classList.add('active');
+    timelineTitle.textContent = dateStr;
+    timelineContent.innerHTML = '';
 
-// 獨立的關閉選單函式 (更穩定)
-function closeSheet() {
-    if(actionSheet && backdrop) {
-        actionSheet.style.transition = 'transform 0.3s ease-out';
-        actionSheet.style.transform = 'translateY(100%)';
-        backdrop.classList.remove('active');
-    }
-}
+    // 排序：由早到晚
+    photosArray.sort((a, b) => a.timestamp - b.timestamp);
 
-// 開啟選單 (Shutter Button)
-if(shutterBtn) shutterBtn.addEventListener('click', () => {
-    actionSheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-    actionSheet.style.transform = 'translateY(0)';
-    backdrop.classList.add('active');
-});
-
-// 點擊背景關閉
-if(backdrop) backdrop.addEventListener('click', closeSheet);
-
-// --- 📷 關鍵修復：拍照與相簿功能 ---
-// 1. 立即拍照
-if (takePhotoBtn && cameraInput) {
-    takePhotoBtn.addEventListener('click', () => {
-        // 1. 先手動關閉選單 (不要依賴 backdrop.click)
-        if(actionSheet) {
-            actionSheet.style.transform = 'translateY(100%)';
-            backdrop.classList.remove('active');
-        }
-        
-        // 2. 直接打開相機 (這是最穩定的寫法)
-        setTimeout(() => {
-            cameraInput.click();
-        }, 100);
+    photosArray.forEach(photo => {
+        const imgUrl = URL.createObjectURL(photo.imageBlob);
+        const item = document.createElement('div');
+        item.classList.add('timeline-item');
+        item.innerHTML = `
+            <div class="timeline-card">
+                <div class="timeline-img" style="background-image: url('${imgUrl}')"></div>
+                <div class="timeline-caption">Time: ${photo.time}</div>
+            </div>
+        `;
+        timelineContent.appendChild(item);
     });
 }
-if(cameraInput) {
-    cameraInput.addEventListener('change', (e) => handleImageUpload(e.target.files[0]));
-}
-
-// 2. 從相簿選擇 (支援多圖)
-if(chooseAlbumBtn && albumInput) {
-    chooseAlbumBtn.addEventListener('click', () => {
-        closeSheet();       // 先關閉選單
-        albumInput.click(); // 再觸發相簿
-    });
-}
-if (albumInput) {
-    albumInput.addEventListener('change', (e) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            // 改呼叫新的「批次處理」函式
-            handleBatchUpload(files);
-        }
-    });
-}
-
-// --- 其他功能 ---
+if(closeTimelineBtn) closeTimelineBtn.addEventListener('click', () => timelinePage.classList.remove('active'));
 
 // 編輯頁面
 if(editBtn) {
@@ -309,9 +288,7 @@ if(editBtn) {
     });
 }
 if(closeEditorBtn) closeEditorBtn.addEventListener('click', () => editorPage.classList.remove('active'));
-
 if(realGalleryBtn) realGalleryBtn.addEventListener('click', () => multiPhotoInput.click());
-
 if(multiPhotoInput) {
     multiPhotoInput.addEventListener('change', (e) => {
         const files = e.target.files;
@@ -321,7 +298,6 @@ if(multiPhotoInput) {
         }
     });
 }
-
 function renderPhotoToGrid(file) {
     const div = document.createElement('div');
     div.classList.add('gallery-item');
@@ -335,41 +311,57 @@ function renderPhotoToGrid(file) {
     galleryGrid.appendChild(div);
 }
 
-// 時間軸
-function openTimeline(dateStr, photosArray) {
-    if(!timelinePage) return;
-    timelinePage.classList.add('active');
-    timelineTitle.textContent = dateStr;
-    timelineContent.innerHTML = '';
-    photosArray.sort((a, b) => a.timestamp - b.timestamp);
-    photosArray.forEach(photo => {
-        const imgUrl = URL.createObjectURL(photo.imageBlob);
-        const item = document.createElement('div');
-        item.classList.add('timeline-item');
-        item.innerHTML = `
-            <div class="timeline-card">
-                <div class="timeline-img" style="background-image: url('${imgUrl}')"></div>
-                <div class="timeline-caption">Time: ${photo.time}</div>
-            </div>`;
-        timelineContent.appendChild(item);
+// ==========================================
+// 7. 互動監聽
+// ==========================================
+// 關閉選單函式
+function closeSheet() {
+    if(actionSheet && backdrop) {
+        actionSheet.style.transition = 'transform 0.3s ease-out';
+        actionSheet.style.transform = 'translateY(100%)';
+        backdrop.classList.remove('active');
+    }
+}
+
+// 拍照與相簿監聽 (修正版)
+if(shutterBtn) shutterBtn.addEventListener('click', () => {
+    actionSheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    actionSheet.style.transform = 'translateY(0)';
+    backdrop.classList.add('active');
+});
+if(backdrop) backdrop.addEventListener('click', closeSheet);
+
+// 1. 拍照
+if(takePhotoBtn && cameraInput) {
+    takePhotoBtn.addEventListener('click', () => {
+        closeSheet();
+        setTimeout(() => cameraInput.click(), 100);
     });
 }
-if(closeTimelineBtn) closeTimelineBtn.addEventListener('click', () => timelinePage.classList.remove('active'));
+if(cameraInput) {
+    cameraInput.addEventListener('change', (e) => handleImageUpload(e.target.files[0]));
+}
 
-// 個人頁面與VIP
-if(openProfileBtn) openProfileBtn.addEventListener('click', () => profilePage.classList.add('active'));
-if(closeProfileBtn) closeProfileBtn.addEventListener('click', () => profilePage.classList.remove('active'));
-if(logoutBtn) logoutBtn.addEventListener('click', () => alert('Log out'));
-if(tagPeopleBtn) tagPeopleBtn.addEventListener('click', () => alert("VIP 功能：標註朋友"));
-if(tagLocationBtn) tagLocationBtn.addEventListener('click', () => prompt("輸入地點:", "Taipei"));
+// 2. 相簿多選 (修正監聽器)
+if(chooseAlbumBtn && albumInput) {
+    chooseAlbumBtn.addEventListener('click', () => {
+        closeSheet();
+        setTimeout(() => albumInput.click(), 100);
+    });
+}
+// ⚠️ 這裡使用新的 handleBatchUpload
+if(albumInput) {
+    albumInput.addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            handleBatchUpload(files); // 改用批次處理
+        }
+    });
+}
 
-
-// ==========================================
-// 7. 頁面滑動邏輯
-// ==========================================
+// 頁面滑動與其他雜項
 track.addEventListener('mousedown', pageDragStart);
 track.addEventListener('touchstart', pageDragStart);
-
 function pageDragStart(e) {
     if (isDraggingSheet) return;
     isDraggingPage = true; isHorizontalMove = false;
@@ -381,7 +373,6 @@ function pageDragStart(e) {
     window.addEventListener('mouseup', pageDragEnd);
     window.addEventListener('touchend', pageDragEnd);
 }
-
 function pageDragMove(e) {
     if (!isDraggingPage) return;
     const currentX = getX(e); const currentY = getY(e);
@@ -400,7 +391,6 @@ function pageDragMove(e) {
         track.style.transform = `translateX(${currentTranslate}%)`;
     }
 }
-
 function pageDragEnd(e) {
     if (!isDraggingPage && !isHorizontalMove) { cleanupPageDrag(); return; }
     isDraggingPage = false;
@@ -410,14 +400,12 @@ function pageDragEnd(e) {
     updateCarousel();
     cleanupPageDrag();
 }
-
 function cleanupPageDrag() {
     window.removeEventListener('mousemove', pageDragMove);
     window.removeEventListener('touchmove', pageDragMove);
     window.removeEventListener('mouseup', pageDragEnd);
     window.removeEventListener('touchend', pageDragEnd);
 }
-
 function updateCarousel() {
     track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
     track.style.transform = `translateX(-${currentPage * 33.333}%)`;
@@ -427,6 +415,10 @@ function updateCarousel() {
     topBar.style.pointerEvents = isHome ? 'auto' : 'none';
     bottomBar.style.pointerEvents = isHome ? 'auto' : 'none';
 }
-
+if(openProfileBtn) openProfileBtn.addEventListener('click', () => profilePage.classList.add('active'));
+if(closeProfileBtn) closeProfileBtn.addEventListener('click', () => profilePage.classList.remove('active'));
+if(logoutBtn) logoutBtn.addEventListener('click', () => alert('Log out'));
+if(tagPeopleBtn) tagPeopleBtn.addEventListener('click', () => alert("VIP 功能"));
+if(tagLocationBtn) tagLocationBtn.addEventListener('click', () => prompt("輸入地點:", "Taipei"));
 function getX(e) { return e.type.includes('mouse') ? e.pageX : e.touches[0].clientX; }
 function getY(e) { return e.type.includes('mouse') ? e.pageY : e.touches[0].clientY; }
