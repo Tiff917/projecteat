@@ -398,7 +398,19 @@ if(backdrop) backdrop.addEventListener('click', () => {
 if(takePhotoBtn) takePhotoBtn.addEventListener('click', () => { backdrop.click(); cameraInput.click(); });
 if(cameraInput) cameraInput.addEventListener('change', (e) => handleImageUpload(e.target.files[0]));
 if(chooseAlbumBtn) chooseAlbumBtn.addEventListener('click', () => { backdrop.click(); albumInput.click(); });
-if(albumInput) albumInput.addEventListener('change', (e) => handleImageUpload(e.target.files[0]));
+// 👇 請複製這段，覆蓋掉上面的舊代碼
+if(albumInput) {
+    albumInput.addEventListener('change', (e) => {
+        const files = e.target.files;
+        // 如果有選照片
+        if (files && files.length > 0) {
+            // 用迴圈把每一張都存進回憶資料庫
+            Array.from(files).forEach(file => {
+                handleImageUpload(file);
+            });
+        }
+    });
+}
 
 function getX(e) { return e.type.includes('mouse') ? e.pageX : e.touches[0].clientX; }
 function getY(e) { return e.type.includes('mouse') ? e.pageY : e.touches[0].clientY; }
