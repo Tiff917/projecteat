@@ -190,33 +190,48 @@ function getAllPhotosGrouped() {
 // ==========================================
 // 5. 存入照片邏輯 (支援多張)
 // ==========================================
-function handleImageUpload(file) {
-    if (!file) return;
-
-    // 預覽
-    const imageURL = URL.createObjectURL(file);
-    if(card) card.style.backgroundImage = `url('${imageURL}')`;
-
+// 新增：批次上傳照片 (專門解決多圖導致日曆重複的問題)
+function handleBatchUpload(files) {
     if (!db) return;
-    
+
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
+    
+    // 開啟一次交易，處理所有照片
     const transaction = db.transaction([STORE_NAME], 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
 
-    store.add({
-        date: todayStr,
-        time: timeStr,
-        imageBlob: file,
-        timestamp: now.getTime()
+    // 把檔案轉成陣列，跑迴圈存入
+    Array.from(files).forEach((file, index) => {
+        // 為了讓時間有點區隔，我們稍微微調每一張的毫秒數
+        // 這樣排序才不會亂掉
+        const timeOffset = now.getTime() + index; 
+        const timeStr = new Date(timeOffset).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        store.add({
+            date: todayStr,
+            time: timeStr,
+            imageBlob: file,
+            timestamp: timeOffset
+        });
     });
 
+    // ⚠️ 關鍵：等「全部」都存完後，才執行這一次
     transaction.oncomplete = () => {
-        console.log("照片已存入:", todayStr);
+        console.log(`成功存入 ${files.length} 張照片`);
+        
+        // 1. 更新首頁卡片 (顯示第一張當代表)
+        const firstImgURL = URL.createObjectURL(files[0]);
+        if(card) card.style.backgroundImage = `url('${firstImgURL}')`;
+
+        // 2. 重新繪製日曆 (只畫一次！)
         renderCalendar();
-        alert("照片已儲存！");
+        
+        alert(`已成功儲存 ${files.length} 張照片到回憶中！`);
+    };
+
+    transaction.onerror = (e) => {
+        console.error("上傳失敗:", e);
     };
 }
 
@@ -274,8 +289,8 @@ if (albumInput) {
     albumInput.addEventListener('change', (e) => {
         const files = e.target.files;
         if (files && files.length > 0) {
-            // 用迴圈把每一張都存進去
-            Array.from(files).forEach(file => handleImageUpload(file));
+            // 改呼叫新的「批次處理」函式
+            handleBatchUpload(files);
         }
     });
 }
