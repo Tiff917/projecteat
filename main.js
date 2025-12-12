@@ -50,9 +50,9 @@ let sheetStartY = 0;
 
 // 資料庫變數
 let db;
-const DB_NAME = 'GourmetDB_v2';
+const DB_NAME = 'GourmetDB_v4';
 const STORE_NAME = 'photos';
-const DB_VERSION = 3; 
+const DB_VERSION = 1; 
 
 // ==========================================
 // 2. 初始化資料庫
@@ -245,10 +245,18 @@ if(backdrop) backdrop.addEventListener('click', closeSheet);
 
 // --- 📷 關鍵修復：拍照與相簿功能 ---
 // 1. 立即拍照
-if(takePhotoBtn && cameraInput) {
+if (takePhotoBtn && cameraInput) {
     takePhotoBtn.addEventListener('click', () => {
-        closeSheet();        // 先關閉選單
-        cameraInput.click(); // 再觸發相機
+        // 1. 先手動關閉選單 (不要依賴 backdrop.click)
+        if(actionSheet) {
+            actionSheet.style.transform = 'translateY(100%)';
+            backdrop.classList.remove('active');
+        }
+        
+        // 2. 直接打開相機 (這是最穩定的寫法)
+        setTimeout(() => {
+            cameraInput.click();
+        }, 100);
     });
 }
 if(cameraInput) {
@@ -262,10 +270,11 @@ if(chooseAlbumBtn && albumInput) {
         albumInput.click(); // 再觸發相簿
     });
 }
-if(albumInput) {
+if (albumInput) {
     albumInput.addEventListener('change', (e) => {
         const files = e.target.files;
         if (files && files.length > 0) {
+            // 用迴圈把每一張都存進去
             Array.from(files).forEach(file => handleImageUpload(file));
         }
     });
