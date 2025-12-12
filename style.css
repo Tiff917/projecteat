@@ -1,0 +1,268 @@
+/* --- 1. 基礎設定 --- */
+* {
+    box-sizing: border-box;
+    margin: 0; padding: 0;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+}
+
+:root {
+    --bg-color: #F2EBE0;       
+    --primary-brown: #8D6E63;  
+    --text-dark: #5D4037;
+}
+
+body {
+    background-color: var(--bg-color);
+    width: 100vw; height: 100vh;
+    overflow: hidden; /* 禁止瀏覽器預設捲動 */
+    position: fixed; /* 鎖定畫面 */
+}
+
+/* --- 2. 滑動軌道 (核心) --- */
+.carousel-track {
+    display: flex;
+    width: 300%; /* 三個頁面寬 */
+    height: 100%;
+    transform: translateX(-33.333%); /* 初始位置在中間 */
+    will-change: transform; /* 效能優化 */
+}
+
+.page-container {
+    width: 33.333%; height: 100%;
+    flex-shrink: 0;
+    position: relative;
+    display: flex; flex-direction: column; 
+    align-items: center; justify-content: center;
+    overflow-y: auto; /* 內容長可捲動 */
+}
+
+/* 用於外部載入內容的包覆層 */
+.page-content-wrapper {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center;
+    padding-top: 100px; /* 避開 Top Bar */
+}
+
+.loading-text { color: #aaa; font-size: 14px; }
+
+/* --- 3. Home Card --- */
+.card {
+    /* 1. 設定寬度 */
+    width: 85vw; 
+    max-width: 400px;
+    
+    /* 2. 👇 關鍵修改：強制變成正方形 */
+    /* 使用 aspect-ratio: 1/1 是最現代的寫法，寬高自動相等 */
+    aspect-ratio: 1 / 1;
+    height: auto;   /* 覆蓋掉原本的 height 設定 */
+    min-height: 0;  /* 清除原本的限制 */
+    max-height: none;
+
+    /* 其他樣式保持不變 */
+    background-color: #ddd; 
+    border-radius: 35px;
+    background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80');
+    background-size: cover; 
+    background-position: center;
+    box-shadow: 0 15px 30px rgba(93, 64, 55, 0.15);
+    position: relative; 
+    overflow: hidden;
+}
+.card::before {
+    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(30, 30, 30, 0.6); z-index: 2;
+}
+/* --- 4. UI 元件 (Bars) --- */
+
+.top-bar, .bottom-bar {
+    position: fixed; 
+    
+    /* 1. 水平置中 */
+    left: 50%; 
+    transform: translateX(-50%); 
+    
+    /* 2. 寬度設定 */
+    width: 86%;  
+    
+    /* 3. 排列方式：分散對齊 */
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+
+    /* 👇 新增這一行：讓左右兩邊的 Icon 往內縮 5px */
+    padding: 20px 20px; 
+    
+    z-index: 100; 
+    pointer-events: none; 
+    transition: opacity 0.3s;
+}
+/* --- 上方 Bar (Top Bar) --- */
+
+.top-bar {
+
+/* 依照圖片，它離頂部有一段距離 (避開動態島) */
+
+top: max(80px, env(safe-area-inset-top));
+
+}
+
+
+
+/* --- 下方 Bar (Bottom Bar) --- */
+
+.bottom-bar {
+
+/* 依照圖片，它離底部非常高 (懸浮感) */
+
+bottom: max(80px, env(safe-area-inset-bottom));
+
+}
+
+
+
+/* --- 按鈕容器共用設定 --- */
+
+.btn-container {
+
+pointer-events: auto; /* 恢復按鈕可點擊 */
+
+cursor: pointer;
+
+transition: transform 0.1s;
+
+display: flex; justify-content: center; align-items: center;
+
+}
+
+.btn-container:active { transform: scale(0.92); }
+
+
+
+/* --- 針對圖片中的 Icon 樣式微調 --- */
+
+
+
+/* 1. 頭像與右側通知 (圓形) */
+
+.avatar {
+
+width: 55px; height: 55px;
+
+background-color: #947867; border-radius: 50%;
+
+}
+
+.notification {
+
+width: 55px; height: 55px;
+
+background-color: #947867; border-radius: 50%;
+
+box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+
+}
+
+
+
+/* 2. 中間搜尋條 (長條形) */
+
+.search-pill {
+
+/* 在分散對齊下，設定 flex: 1 或是固定寬度都可以，這裡建議固定寬度讓它不要太長 */
+
+width: 120px;
+
+height: 45px;
+
+background-color: #947867;
+
+border-radius: 22px;
+
+display: flex; justify-content: flex-start; align-items: center; padding-left: 15px;
+
+box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+
+
+/* 讓它在 Bar 中間不會被拉伸，保持置中 */
+
+margin: 0 auto;
+
+/* 若用 space-between，這裡可以用 transform 微調確保絕對居中，或不用動 */
+
+}
+
+
+
+/* 3. 下方中間快門鍵 (大圓) */
+
+.shutter-btn {
+
+width: 76px; height: 76px;
+
+border: 5px solid #F2EBE0; /* 外圈顏色 */
+
+background-color: #947867; border-radius:50%;
+
+box-shadow: 0 0 0 4px #947867 inset; /* 模擬圖片中的內圈層次 */
+
+}
+
+
+
+/* 4. SVG Icon 線條設定 */
+
+svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+.icon-white svg { stroke: white; stroke-width: 2; }
+
+/* 下方左右兩個 Icon 顏色較深 */
+
+.icon-brown svg { stroke: #8D6E63; stroke-width: 2.5; width: 32px; height: 32px; }
+/* --- 5. 個人頁面 (Profile) --- */
+.profile-page {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: var(--bg-color);
+    z-index: 300; transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    display: flex; flex-direction: column;
+    padding: max(20px, env(safe-area-inset-top)) 30px 40px 30px;
+}
+.profile-page.active { transform: translateX(0); }
+.back-btn { width: 40px; height: 40px; background-color: #D7CCC8; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; margin: 10px 0 20px 0; }
+.profile-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 40px; }
+.profile-avatar { width: 100px; height: 100px; background-color: #fff; border-radius: 50%; margin-bottom: 15px; }
+.profile-name { font-size: 22px; font-weight: bold; color: var(--text-dark); }
+.profile-email { font-size: 14px; opacity: 0.6; margin-top: 5px; color: var(--text-dark); }
+.profile-menu { display: flex; flex-direction: column; gap: 20px; width: 100%; }
+.menu-item { font-size: 16px; color: var(--text-dark); font-weight: 500; cursor: pointer; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.logout-btn { margin-top: auto; width: 100%; height: 50px; background-color: #C1B0A4; color: white; border: none; border-radius: 15px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: max(10px, env(safe-area-inset-bottom)); }
+
+/* --- 6. Action Sheet --- */
+.modal-backdrop {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    z-index: 400;
+}
+.modal-backdrop.active { opacity: 1; pointer-events: auto; }
+
+.action-sheet {
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    background-color: var(--bg-color);
+    border-top-left-radius: 35px; border-top-right-radius: 35px;
+    padding: 10px 25px 30px 25px;
+    padding-bottom: max(30px, env(safe-area-inset-bottom));
+    transform: translateY(100%); z-index: 450;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
+}
+.sheet-handle-area { width: 100%; height: 40px; display: flex; justify-content: center; align-items: center; }
+.sheet-handle { 
+    width: 20px; /* <--- 這裡改成 20px */
+    height: 5px; 
+    background-color: #D7CCC8; 
+    border-radius: 10px; 
+}
+.sheet-option { display: flex; align-items: center; padding: 18px 0; border-bottom: 1px solid #E0D4C8; color: var(--text-dark); font-weight: 600; }
+.sheet-option svg { width: 24px; height: 24px; margin-right: 15px; stroke: var(--primary-brown); }
