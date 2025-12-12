@@ -290,37 +290,68 @@ if(albumInput) {
 }
 
 // ==========================================
-// 7. 時間軸與編輯頁面
+// 7. 時間軸與編輯頁面 (修正版)
 // ==========================================
-function openTimeline(dateStr, photosArray) {
-    if(!timelinePage) return;
-    timelinePage.classList.add('active');
-    timelineTitle.textContent = dateStr;
-    timelineContent.innerHTML = '';
 
+// 1. 開啟時間軸 (修正：每次點擊時重新抓取元素，避免變數為空導致打不開)
+function openTimeline(dateStr, photosArray) {
+    // ⬇️ 關鍵修改：不要用全域變數，改成「現抓現用」
+    const targetPage = document.getElementById('timelinePage');
+    const targetTitle = document.getElementById('timelineTitle');
+    const targetContent = document.getElementById('timelineContent');
+
+    // 防呆檢查：如果 HTML 沒寫對，這裡會跳錯提示
+    if (!targetPage || !targetTitle || !targetContent) {
+        console.error("錯誤：找不到 timelinePage 相關元素，請檢查 index.html");
+        alert("錯誤：無法開啟時間軸頁面 (HTML ID 遺失)");
+        return;
+    }
+
+    // 正常執行開啟邏輯
+    targetPage.classList.add('active');
+    targetTitle.textContent = dateStr;
+    targetContent.innerHTML = ''; // 清空舊內容
+
+    // 排序：依照時間由早到晚
     photosArray.sort((a, b) => a.timestamp - b.timestamp);
 
+    // 產生照片卡片
     photosArray.forEach(photo => {
         const imgUrl = URL.createObjectURL(photo.imageBlob);
         const item = document.createElement('div');
         item.classList.add('timeline-item');
+        
+        // 渲染照片與時間
         item.innerHTML = `
             <div class="timeline-card">
                 <div class="timeline-img" style="background-image: url('${imgUrl}')"></div>
                 <div class="timeline-caption">Time: ${photo.time}</div>
             </div>`;
-        timelineContent.appendChild(item);
+        targetContent.appendChild(item);
     });
 }
-if(closeTimelineBtn) closeTimelineBtn.addEventListener('click', () => timelinePage.classList.remove('active'));
 
+// 2. 關閉時間軸按鈕 (確保監聽器有綁定)
+const closeTimeBtn = document.getElementById('closeTimelineBtn');
+if(closeTimeBtn) {
+    closeTimeBtn.addEventListener('click', () => {
+        const targetPage = document.getElementById('timelinePage');
+        if(targetPage) targetPage.classList.remove('active');
+    });
+}
+
+// 3. 編輯頁面邏輯 (保持原樣，加上安全檢查)
 if(editBtn) {
     editBtn.addEventListener('click', () => {
-        editorPage.classList.add('active');
-        if(galleryGrid.children.length <= 1) {
-            setTimeout(() => {
-                if(confirm("匯入相簿照片？")) multiPhotoInput.click();
-            }, 300);
+        if(editorPage) {
+            editorPage.classList.add('active');
+            
+            // 自動詢問是否匯入
+            if(galleryGrid && galleryGrid.children.length <= 1) {
+                setTimeout(() => {
+                    if(confirm("匯入相簿照片？") && multiPhotoInput) multiPhotoInput.click();
+                }, 300);
+            }
         }
     });
 }
