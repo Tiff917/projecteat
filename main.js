@@ -296,3 +296,31 @@ albumInput.addEventListener('change', (e) => handleImageUpload(e.target.files[0]
 
 function getX(e) { return e.type.includes('mouse') ? e.pageX : e.touches[0].clientX; }
 function getY(e) { return e.type.includes('mouse') ? e.pageY : e.touches[0].clientY; }
+
+// 修改後的 openTimeline 函式
+function openTimeline(dateStr, photosArray) {
+    timelinePage.classList.add('active'); // 滑入頁面
+    timelineTitle.textContent = dateStr;  // 設定標題 (日期)
+    timelineContent.innerHTML = '';       // 清空舊內容
+
+    // 1. 排序：依時間「由早到晚」排列 (如果要反過來，改成 b.timestamp - a.timestamp)
+    photosArray.sort((a, b) => a.timestamp - b.timestamp);
+
+    // 2. 產生乾淨的照片卡片
+    photosArray.forEach(photo => {
+        const imgUrl = URL.createObjectURL(photo.imageBlob);
+        
+        const item = document.createElement('div');
+        item.classList.add('timeline-item');
+        
+        // 簡化後的 HTML 結構：只有照片卡片 + 下方小小的時間文字
+        item.innerHTML = `
+            <div class="timeline-card">
+                <div class="timeline-img" style="background-image: url('${imgUrl}')"></div>
+                <div class="timeline-caption">
+                    Time: ${photo.time} </div>
+            </div>
+        `;
+        timelineContent.appendChild(item);
+    });
+}
