@@ -469,6 +469,7 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
     display: flex; justify-content: center; align-items: center;
 }
 
+
 /* --- 8. 照片列表樣式 (Photo Stream) --- */
 .timeline-item {
     margin-bottom: 25px; /* 照片之間的距離 */
@@ -480,24 +481,28 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
     background: white;
     border-radius: 20px; /* 圓角 */
     overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08); /* 讓照片浮起來的陰影 */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08); /* 陰影 */
 }
 
 .timeline-img {
     width: 100%;
-    /* 這裡設定照片比例，例如 4:3 或 1:1，cover 代表填滿裁切 */
-    aspect-ratio: 4/3; 
+    aspect-ratio: 4/3; /* 照片比例 */
     background-size: cover;
     background-position: center;
     display: block;
 }
 
-/* (選填) 如果你想在照片下面顯示小小的拍攝時間 */
 .timeline-caption {
     padding: 12px 15px;
     font-size: 13px;
     color: #999;
-    text-align: right; /* 時間靠右顯示 */
+    text-align: right;
     background-color: #fff;
     border-top: 1px solid #f0f0f0;
+}
+
+/* 簡單的淡入動畫 */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
