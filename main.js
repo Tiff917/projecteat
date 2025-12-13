@@ -169,6 +169,8 @@ async function renderCalendar() {
 
             // 點擊事件
             dayCell.onclick = () => {
+                console.log("點擊了日期:", dateString); // 看 Console 有沒有反應
+                alert("正在開啟照片..."); // 如果你不確定有沒有點到，可以把這行註解拿掉測試
                 openTimeline(dateString, photosGroup[dateString]);
             };
         }
@@ -290,63 +292,106 @@ if(albumInput) {
 }
 
 // ==========================================
-// 7. 時間軸與編輯頁面 (修正版)
+// ==========================================
+// 7. 時間軸與編輯頁面 (最終保險版)
 // ==========================================
 
-// 1. 開啟時間軸 (修正：每次點擊時重新抓取元素，避免變數為空導致打不開)
+// 1. 開啟時間軸 (具備自動修復功能，保證打得開)
 function openTimeline(dateStr, photosArray) {
-    // ⬇️ 關鍵修改：不要用全域變數，改成「現抓現用」
-    const targetPage = document.getElementById('timelinePage');
-    const targetTitle = document.getElementById('timelineTitle');
-    const targetContent = document.getElementById('timelineContent');
+    // A. 嘗試抓取頁面
+    let targetPage = document.getElementById('timelinePage');
+    
+    // B. 如果 HTML 裡找不到，JS 自動幫你蓋一個！(防呆機制)
+    if (!targetPage) {
+        console.log("HTML 遺失，正在自動建立時間軸頁面...");
+        targetPage = document.createElement('div');
+        targetPage.id = 'timelinePage';
+        targetPage.className = 'editor-page'; // 吃到 CSS 樣式
+        
+        // 強制寫入樣式，避免 CSS 沒載入導致透明
+        Object.assign(targetPage.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: '#F2EBE0', zIndex: '9999',
+            transform: 'translateY(100%)', // 預設藏在下面
+            transition: 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+            display: 'flex', flexDirection: 'column'
+        });
 
-    // 防呆檢查：如果 HTML 沒寫對，這裡會跳錯提示
-    if (!targetPage || !targetTitle || !targetContent) {
-        console.error("錯誤：找不到 timelinePage 相關元素，請檢查 index.html");
-        alert("錯誤：無法開啟時間軸頁面 (HTML ID 遺失)");
-        return;
+        // 塞入結構
+        targetPage.innerHTML = `
+            <div class="editor-header" style="height:50px; display:flex; justify-content:space-between; align-items:center; padding:0 20px; margin-top:env(safe-area-inset-top);">
+                <span class="header-btn" id="autoCloseTimeline" style="cursor:pointer; font-size:16px; display:flex; align-items:center;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;"><path d="M15 18l-6-6 6-6"/></svg> Back
+                </span>
+                <span class="header-title" id="autoTimelineTitle" style="font-weight:bold; font-size:18px;">${dateStr}</span>
+                <span style="opacity:0">Next</span>
+            </div>
+            <div id="autoTimelineContent" style="flex:1; overflow-y:auto; padding:20px; background:#f9f9f9;"></div>
+        `;
+        document.body.appendChild(targetPage);
+
+        // 綁定關閉按鈕
+        document.getElementById('autoCloseTimeline').onclick = () => {
+            targetPage.style.transform = 'translateY(100%)';
+            targetPage.classList.remove('active');
+        };
     }
 
-    // 正常執行開啟邏輯
-    targetPage.classList.add('active');
-    targetTitle.textContent = dateStr;
-    targetContent.innerHTML = ''; // 清空舊內容
+    // C. 取得標題與內容容器 (優先使用自動生成的 ID)
+    const targetTitle = document.getElementById('autoTimelineTitle') || document.getElementById('timelineTitle');
+    const targetContent = document.getElementById('autoTimelineContent') || document.getElementById('timelineContent');
 
-    // 排序：依照時間由早到晚
-    photosArray.sort((a, b) => a.timestamp - b.timestamp);
-
-    // 產生照片卡片
-    photosArray.forEach(photo => {
-        const imgUrl = URL.createObjectURL(photo.imageBlob);
-        const item = document.createElement('div');
-        item.classList.add('timeline-item');
+    // D. 更新內容
+    if(targetTitle) targetTitle.textContent = dateStr;
+    if(targetContent) {
+        targetContent.innerHTML = ''; // 清空舊內容
         
-        // 渲染照片與時間
-        item.innerHTML = `
-            <div class="timeline-card">
-                <div class="timeline-img" style="background-image: url('${imgUrl}')"></div>
-                <div class="timeline-caption">Time: ${photo.time}</div>
-            </div>`;
-        targetContent.appendChild(item);
-    });
+        // 排序：時間由早到晚
+        photosArray.sort((a, b) => a.timestamp - b.timestamp);
+
+        // 產生每一張照片的卡片
+        photosArray.forEach(photo => {
+            const imgUrl = URL.createObjectURL(photo.imageBlob);
+            const item = document.createElement('div');
+            // 內嵌基本樣式，確保排版不跑掉
+            item.style.marginBottom = '25px';
+            item.style.width = '100%';
+            
+            item.innerHTML = `
+                <div style="background:white; border-radius:20px; overflow:hidden; box-shadow:0 5px 15px rgba(0,0,0,0.08);">
+                    <div style="width:100%; aspect-ratio:4/3; background-image:url('${imgUrl}'); background-size:cover; background-position:center;"></div>
+                    <div style="padding:12px 15px; font-size:13px; color:#999; text-align:right; border-top:1px solid #f0f0f0;">
+                        Time: ${photo.time}
+                    </div>
+                </div>`;
+            targetContent.appendChild(item);
+        });
+    }
+
+    // E. 滑出來！(強制設定樣式)
+    setTimeout(() => {
+        targetPage.classList.add('active');
+        targetPage.style.transform = 'translateY(0)'; 
+    }, 10);
 }
 
-// 2. 關閉時間軸按鈕 (確保監聽器有綁定)
+// 2. 關閉時間軸按鈕 (保留給原本 HTML 有寫的情況)
 const closeTimeBtn = document.getElementById('closeTimelineBtn');
 if(closeTimeBtn) {
     closeTimeBtn.addEventListener('click', () => {
         const targetPage = document.getElementById('timelinePage');
-        if(targetPage) targetPage.classList.remove('active');
+        if(targetPage) {
+            targetPage.classList.remove('active');
+            targetPage.style.transform = 'translateY(100%)';
+        }
     });
 }
 
-// 3. 編輯頁面邏輯 (保持原樣，加上安全檢查)
+// 3. 編輯頁面邏輯 (保持原樣)
 if(editBtn) {
     editBtn.addEventListener('click', () => {
         if(editorPage) {
             editorPage.classList.add('active');
-            
-            // 自動詢問是否匯入
             if(galleryGrid && galleryGrid.children.length <= 1) {
                 setTimeout(() => {
                     if(confirm("匯入相簿照片？") && multiPhotoInput) multiPhotoInput.click();
