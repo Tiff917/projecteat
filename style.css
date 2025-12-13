@@ -177,3 +177,16 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .gallery-add-btn { width: 100%; aspect-ratio: 1/1; background-color: #EFEBE9; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border: 2px dashed #8D6E63; color: #8D6E63; font-weight: bold; font-size: 14px; }
 .gallery-add-btn svg { width: 30px; height: 30px; margin-bottom: 5px; stroke: #8D6E63; }
 .preview-placeholder { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; color: #999; font-size: 16px; background-color: #f0f0f0; }
+
+/* style.css 新增 */
+
+/* 多選按鈕 - 啟用狀態 (變深褐色 + 白字) */
+.tool-capsule.active {
+    background-color: #8D6E63 !important; /* 深褐色 */
+    color: white !important;
+    border: 1px solid #8D6E63;
+}
+
+.tool-capsule.active svg {
+    stroke: white !important; /* 圖示變白 */
+}
