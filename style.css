@@ -600,23 +600,23 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
     pointer-events: none;
 }
 
-/* --- 修正版：確保頁面不會互相遮擋 --- */
+/* style.css */
+
+/* --- 修正版：恢復置中，並處理遮擋 --- */
 .page-container {
     width: 33.333%; 
     height: 100%;
     flex-shrink: 0;
-    
-    /* 關鍵：建立圖層基準 */
-    position: relative; 
-    z-index: 1; 
+    position: relative;
     
     display: flex; 
     flex-direction: column; 
     align-items: center; 
-    justify-content: flex-start; /* 改成從頂部開始排，避免被擠出畫面 */
+    justify-content: center; /* 改回 center */
     
-    /* ⚠️ 絕對關鍵：這行會切掉所有溢出的陰影或物件，防止擋到隔壁 */
-    overflow: hidden; 
+    /* 確保內容可以捲動，但不影響佈局 */
+    overflow-y: auto; 
+    overflow-x: hidden;
 }
 /* === 強制日曆點擊修正 (貼在 style.css 最後面) === */
 
