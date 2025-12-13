@@ -235,34 +235,57 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
     width: 100%; /* 確保滿版 */
 }
 
-/* 讓貼文卡片變成滿版樣式 (像 Instagram) */
-.feed-card {
-    width: 100%; 
-    max-width: none; /* 移除寬度限制 */
-    border-radius: 0; /* 移除圓角 */
-    box-shadow: none; /* 移除陰影 (平面化) */
-    border-bottom: 1px solid #eee; /* 加分隔線 */
-    margin-bottom: 10px;
+/* style.css (最終修正補丁) */
+
+/* === 修正 1：社群頁面滿版 (Instagram 風格) === */
+#page-community {
+    width: 100%;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    /* 保持 padding-top 避開 Top Bar，但左右要貼齊 */
 }
+
+/* 讓貼文卡片變成滿版寬度 */
+.feed-card {
+    width: 100% !important;
+    max-width: none !important; /* 移除寬度限制 */
+    border-radius: 0 !important; /* 移除圓角 */
+    box-shadow: none !important; /* 移除浮動陰影 */
+    border-bottom: 1px solid #e0e0e0; /* 加入分隔線 */
+    margin: 0 0 15px 0 !important; /* 只保留下方間距 */
+}
+
+/* 確保容器本身也是滿版 */
+#feedContainer {
+    width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
 
 /* === 修正 2：編輯照片視窗變正方形 === */
 .preview-area {
     width: 100%;
-    aspect-ratio: 1/1; /* ⚠️ 關鍵：強制正方形 (1:1) */
-    height: auto !important; /* 覆蓋原本的 45vh */
-    background-color: #ddd;
+    aspect-ratio: 1 / 1 !important; /* 強制正方形比例 */
+    height: auto !important; /* 覆蓋原本的 45vh 高度設定 */
+    
+    /* 確保圖片填滿且置中 */
     background-size: cover;
     background-position: center;
+    background-color: #ddd;
 }
 
-/* === 修正 3：編輯頁面 Header 往上移 25px === */
+
+/* === 修正 3：編輯頁面頂部文字距離 Top 10px === */
 .editor-header {
-    /* 原本是 50px，減 25px = 25px */
-    margin-top: 25px !important; 
+    /* 原本是 50px 或 25px，這裡強制改為 10px */
+    margin-top: 10px !important; 
+    
+    /* 建議：加上這行以避開手機瀏海 (若不需要可刪除) */
+    padding-top: env(safe-area-inset-top); 
     
     height: 50px;
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
