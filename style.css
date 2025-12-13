@@ -19,8 +19,7 @@ body { background-color: var(--bg-color); width: 100vw; height: 100vh; overflow:
 /* Memory 頁面特殊設定 (靠上對齊) */
 #page-memory { 
     justify-content: flex-start; 
-    /* ⚠️ 修正：原本 40px -> 改為 15px (再往上移 25px) */
-    padding-top: 15px !important; 
+    padding-top: 80px !important; 
     z-index: 50; /* 提高層級，確保日曆可點 */
 }
 
@@ -154,12 +153,12 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
 /* --- 社群頁面 (Feed) 樣式 --- */
 .feed-card {
-    background: white;
-    width: 90%; max-width: 400px;
-    border-radius: 20px;
-    margin: 0 auto 25px auto; /* 卡片間距 */
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    overflow: hidden;
+    width: 100% !important;
+    margin: 0 !important; /* ⚠️ 關鍵：移除所有外部間距 */
+    border-bottom: 1px solid #efefef; /* 僅用細線分隔 */
+    padding-bottom: 15px; /* 內部稍微留白 */
+    border-radius: 0 !important;
+    box-shadow: none !important;
 }
 .feed-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -248,20 +247,19 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 /* 讓貼文卡片變成滿版寬度 */
 .feed-card {
     width: 100% !important;
-    max-width: none !important; /* 移除寬度限制 */
-    border-radius: 0 !important; /* 移除圓角 */
-    box-shadow: none !important; /* 移除浮動陰影 */
-    border-bottom: 1px solid #e0e0e0; /* 加入分隔線 */
-    margin: 0 0 15px 0 !important; /* 只保留下方間距 */
+    margin: 0 !important; /* ⚠️ 關鍵：移除所有外部間距 */
+    border-bottom: 1px solid #efefef; /* 僅用細線分隔 */
+    padding-bottom: 15px; /* 內部稍微留白 */
+    border-radius: 0 !important;
+    box-shadow: none !important;
 }
 
-/* 確保容器本身也是滿版 */
+/* 3. 確保容器沒有內縮 */
 #feedContainer {
-    width: 100% !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
 }
-
 
 /* === 修正 2：編輯照片視窗變正方形 === */
 .preview-area {
