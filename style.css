@@ -529,3 +529,22 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .editor-page.active {
     transform: translateY(0);
 }
+
+/* style.css 請加在最後面 */
+
+/* 強制讓日曆層級提高，並確保滑鼠游標變化 */
+.calendar-container {
+    position: relative;
+    z-index: 10; /* 提高層級 */
+    pointer-events: auto !important; /* 強制開啟點擊 */
+}
+
+.day-cell {
+    cursor: pointer;
+    pointer-events: auto !important; /* 強制開啟點擊 */
+}
+
+/* 確保滑動軌道不會擋住點擊 */
+.carousel-track {
+    pointer-events: auto;
+}
