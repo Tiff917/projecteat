@@ -1,22 +1,26 @@
 // ==========================================
-// 1. 全域變數
+// 1. 全域變數與設定
 // ==========================================
 const track = document.getElementById('track');
 const topBar = document.getElementById('topBar');
 const bottomBar = document.getElementById('bottomBar');
 const card = document.querySelector('.card');
 
-// 資料庫設定 (V8 強制重置)
+// 資料庫設定 (V8 保持不變，但我們不再自動塞資料)
 let db;
-const DB_NAME = 'GourmetDB_AutoData_v8'; 
+const DB_NAME = 'GourmetDB_Final_v8'; 
 const STORE_NAME = 'photos';
 const DB_VERSION = 1;
 
-let currentPage = 1; // 1 = Home
+// 頁面狀態
+let currentPage = 1; 
 let startX = 0, currentTranslate = -33.333, isDragging = false, startTranslate = 0;
 
+// 日曆顯示狀態 (預設為今天)
+let displayDate = new Date();
+
 // ==========================================
-// 2. 初始化資料庫 & 自動匯入假照片
+// 2. 初始化資料庫 (純淨版：不自動匯入)
 // ==========================================
 function initDB() {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -28,61 +32,10 @@ function initDB() {
     request.onsuccess = (e) => {
         db = e.target.result;
         console.log("資料庫就緒");
-        // 初始化後，檢查並匯入假資料
-        initDummyData(); 
+        renderCalendar(); // 資料庫連線後畫日曆
     };
 }
 initDB();
-
-// 🔥 自動匯入假照片 (讓你有東西可以點)
-async function initDummyData() {
-    const transaction = db.transaction([STORE_NAME], 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const countReq = store.count();
-
-    countReq.onsuccess = async () => {
-        if (countReq.result === 0) {
-            console.log("資料庫是空的，正在匯入假照片...");
-            const dummyImages = [
-                'https://images.unsplash.com/photo-1546069901-ba9599a7e63c', // 沙拉
-                'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38', // 披薩
-                'https://images.unsplash.com/photo-1482049016688-2d3e1b311543'  // 三明治
-            ];
-            
-            for (let i = 0; i < dummyImages.length; i++) {
-                try {
-                    // 去網路抓圖片轉成 Blob
-                    const response = await fetch(dummyImages[i]);
-                    const blob = await response.blob();
-                    
-                    // 偽造時間 (今天的不同時間點)
-                    const now = new Date();
-                    const timeOffset = now.getTime() + (i * 10000); // 錯開時間
-                    const todayStr = now.toISOString().split('T')[0];
-                    const timeStr = new Date(timeOffset).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-
-                    // 存入 DB
-                    const tx = db.transaction([STORE_NAME], 'readwrite');
-                    tx.objectStore(STORE_NAME).add({
-                        date: todayStr,
-                        time: timeStr,
-                        imageBlob: blob,
-                        timestamp: timeOffset
-                    });
-                } catch (err) {
-                    console.error("假照片下載失敗", err);
-                }
-            }
-            // 存完後畫日曆
-            setTimeout(() => {
-                alert("已自動匯入 3 張範例照片，請查看日曆！");
-                renderCalendar();
-            }, 2000);
-        } else {
-            renderCalendar();
-        }
-    };
-}
 
 // ==========================================
 // 3. 載入外部頁面
@@ -103,7 +56,7 @@ async function loadExternalPages() {
 loadExternalPages();
 
 // ==========================================
-// 4. 繪製日曆 (包含點擊修復)
+// 4. 繪製日曆 (含月份切換功能)
 // ==========================================
 async function renderCalendar() {
     const container = document.getElementById('calendarDays');
@@ -116,29 +69,52 @@ async function renderCalendar() {
     
     req.onsuccess = (e) => {
         const allPhotos = e.target.result;
-        // 分組
         const grouped = {};
         allPhotos.forEach(p => {
             if(!grouped[p.date]) grouped[p.date] = [];
             grouped[p.date].push(p);
         });
 
-        // 清空重畫
+        // 重置容器
         container.innerHTML = '';
         const newContainer = container.cloneNode(true);
         container.parentNode.replaceChild(newContainer, container);
         const activeContainer = document.getElementById('calendarDays');
 
-        // 日期計算
-        const date = new Date();
-        const year = date.getFullYear(), month = date.getMonth();
+        // 使用 displayDate 來決定顯示哪個月
+        const year = displayDate.getFullYear();
+        const month = displayDate.getMonth();
+        
+        // 更新標題與切換按鈕
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const headerContainer = document.getElementById('calendarMonth').parentNode;
+        
+        // 清空舊標題，改用動態生成的控制列
+        // 檢查是否已經插入過控制列，避免重複
+        if (!document.getElementById('calControls')) {
+            const controls = document.createElement('div');
+            controls.id = 'calControls';
+            controls.className = 'calendar-controls';
+            controls.innerHTML = `
+                <button class="month-nav-btn" id="prevMonthBtn">&lt;</button>
+                <span id="currentMonthLabel" style="font-size:18px; font-weight:600;">${monthNames[month]} ${year}</span>
+                <button class="month-nav-btn" id="nextMonthBtn">&gt;</button>
+            `;
+            // 隱藏原本的純文字標題，插入新的控制列
+            document.getElementById('calendarMonth').style.display = 'none';
+            headerContainer.appendChild(controls);
+
+            // 綁定按鈕事件
+            document.getElementById('prevMonthBtn').onclick = () => changeMonth(-1);
+            document.getElementById('nextMonthBtn').onclick = () => changeMonth(1);
+        } else {
+            // 已經有控制列，只需更新文字
+            document.getElementById('currentMonthLabel').textContent = `${monthNames[month]} ${year}`;
+        }
+
+        // 計算日期
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const firstDay = new Date(year, month, 1).getDay();
-
-        // 標題
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        const title = document.getElementById('calendarMonth');
-        if(title) title.textContent = `${monthNames[month]} ${year}`;
 
         // 空白格
         for(let i=0; i<firstDay; i++) activeContainer.appendChild(document.createElement('div'));
@@ -153,12 +129,9 @@ async function renderCalendar() {
             
             if(grouped[dateStr] && grouped[dateStr].length > 0) {
                 cell.classList.add('has-photo');
-                // 排序最新
                 const sorted = grouped[dateStr].sort((a,b) => b.timestamp - a.timestamp);
                 cell.style.backgroundImage = `url('${URL.createObjectURL(sorted[0].imageBlob)}')`;
                 cell.textContent = '';
-                
-                // 綁定資料
                 cell.dataset.date = dateStr;
             }
             activeContainer.appendChild(cell);
@@ -175,8 +148,49 @@ async function renderCalendar() {
     };
 }
 
+// 切換月份函式
+function changeMonth(offset) {
+    displayDate.setMonth(displayDate.getMonth() + offset);
+    renderCalendar();
+}
+
 // ==========================================
-// 5. 限時動態 (Story Mode)
+// 5. 批次上傳 (真實選取照片)
+// ==========================================
+function handleBatchUpload(files) {
+    if (!files || files.length === 0) return;
+    if (!db) return;
+
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+
+    Array.from(files).forEach((file, index) => {
+        const timeOffset = now.getTime() + index;
+        const timeStr = new Date(timeOffset).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        store.add({
+            date: todayStr,
+            time: timeStr,
+            imageBlob: file,
+            timestamp: timeOffset
+        });
+    });
+
+    transaction.oncomplete = () => {
+        const firstImgURL = URL.createObjectURL(files[0]);
+        if(card) card.style.backgroundImage = `url('${firstImgURL}')`;
+        
+        // 上傳完後，強制把日曆切換回「今天」，確保看得到剛傳的照片
+        displayDate = new Date(); 
+        renderCalendar();
+        
+        alert(`成功儲存 ${files.length} 張照片！`);
+    };
+}
+
+// ==========================================
+// 6. 限時動態 (Story Mode)
 // ==========================================
 function openStoryMode(dateStr, photos) {
     let page = document.getElementById('storyPage');
@@ -192,8 +206,7 @@ function openStoryMode(dateStr, photos) {
         document.body.appendChild(page);
     }
 
-    // 播放邏輯
-    photos.sort((a,b) => a.timestamp - b.timestamp); // 舊到新
+    photos.sort((a,b) => a.timestamp - b.timestamp);
     let idx = 0;
     
     function show() {
@@ -226,29 +239,37 @@ function openStoryMode(dateStr, photos) {
 }
 
 // ==========================================
-// 6. 滑動邏輯 (修復遮擋)
+// 7. 互動監聽 (確保按鈕功能正常)
 // ==========================================
-function updateCarousel() {
-    track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-    track.style.transform = `translateX(-${currentPage * 33.333}%)`;
-    
-    // 隱藏非當前頁面，防止點擊穿透或遮擋
-    const pages = document.querySelectorAll('.page-container');
-    pages.forEach((p, i) => {
-        if(i === currentPage) {
-            p.style.visibility = 'visible';
-            p.style.pointerEvents = 'auto';
-        } else {
-            p.style.visibility = 'hidden'; // 關鍵：隱藏隔壁頁面
-            p.style.pointerEvents = 'none';
-        }
-    });
-
-    const isHome = currentPage === 1;
-    if(topBar) topBar.style.opacity = isHome ? 1 : 0;
-    if(bottomBar) bottomBar.style.opacity = isHome ? 1 : 0;
+function closeSheet() {
+    if(actionSheet && backdrop) {
+        actionSheet.style.transition = 'transform 0.3s ease-out';
+        actionSheet.style.transform = 'translateY(100%)';
+        backdrop.classList.remove('active');
+    }
 }
+if(shutterBtn) shutterBtn.addEventListener('click', () => {
+    actionSheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    actionSheet.style.transform = 'translateY(0)';
+    backdrop.classList.add('active');
+});
+if(backdrop) backdrop.addEventListener('click', closeSheet);
 
+// 相機 & 相簿 (連接 handleBatchUpload)
+const camInput = document.getElementById('cameraInput');
+const albInput = document.getElementById('albumInput');
+
+if(takePhotoBtn && camInput) {
+    takePhotoBtn.addEventListener('click', () => { closeSheet(); setTimeout(() => camInput.click(), 100); });
+}
+if(camInput) camInput.onchange = (e) => handleBatchUpload(e.target.files);
+
+if(chooseAlbumBtn && albInput) {
+    chooseAlbumBtn.addEventListener('click', () => { closeSheet(); setTimeout(() => albInput.click(), 100); });
+}
+if(albInput) albInput.onchange = (e) => handleBatchUpload(e.target.files);
+
+// 滑動邏輯
 track.addEventListener('mousedown', startDrag);
 track.addEventListener('touchstart', startDrag);
 function startDrag(e) { 
@@ -261,7 +282,6 @@ function moveDrag(e) {
     if(!isDragging) return;
     const x = e.pageX || e.touches[0].clientX;
     const delta = x - startX;
-    // 簡單判斷
     track.style.transform = `translateX(${startTranslate + (delta/window.innerWidth)*33.333}%)`;
 }
 window.addEventListener('mouseup', endDrag);
@@ -269,52 +289,54 @@ window.addEventListener('touchend', endDrag);
 function endDrag(e) {
     if(!isDragging) return;
     isDragging = false;
-    // 這裡做簡化判斷，實際可根據 delta 決定翻頁
     const endX = e.pageX || e.changedTouches[0].clientX;
     if (endX - startX > 50 && currentPage > 0) currentPage--;
     else if (startX - endX > 50 && currentPage < 2) currentPage++;
     updateCarousel();
 }
-
-// 綁定其他按鈕 (Action Sheet 等) - 這裡保留您原本的邏輯
-// 請確保 HTML ID 存在
-const backdrop = document.getElementById('backdrop');
-const actionSheet = document.getElementById('actionSheet');
-if(document.getElementById('shutterBtn')) {
-    document.getElementById('shutterBtn').onclick = () => {
-        actionSheet.style.transform = 'translateY(0)';
-        backdrop.classList.add('active');
-    };
-}
-if(backdrop) backdrop.onclick = () => {
-    actionSheet.style.transform = 'translateY(100%)';
-    backdrop.classList.remove('active');
-};
-// 拍照與相簿
-const camInput = document.getElementById('cameraInput');
-const albInput = document.getElementById('albumInput');
-if(document.getElementById('takePhotoBtn')) document.getElementById('takePhotoBtn').onclick = () => { backdrop.click(); camInput.click(); };
-if(document.getElementById('chooseAlbumBtn')) document.getElementById('chooseAlbumBtn').onclick = () => { backdrop.click(); albInput.click(); };
-
-if(camInput) camInput.onchange = (e) => handleUpload(e.target.files);
-if(albInput) albInput.onchange = (e) => handleUpload(e.target.files);
-
-function handleUpload(files) {
-    if(!files.length) return;
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const tx = db.transaction([STORE_NAME], 'readwrite');
-    Array.from(files).forEach((f, i) => {
-        tx.objectStore(STORE_NAME).add({
-            date: today,
-            time: new Date().toLocaleTimeString(),
-            imageBlob: f,
-            timestamp: now.getTime() + i
-        });
+function updateCarousel() {
+    track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    track.style.transform = `translateX(-${currentPage * 33.333}%)`;
+    
+    // 頁面隱藏邏輯 (防遮擋)
+    const pages = document.querySelectorAll('.page-container');
+    pages.forEach((p, i) => {
+        if(i === currentPage) {
+            p.style.visibility = 'visible';
+            p.style.pointerEvents = 'auto';
+        } else {
+            p.style.visibility = 'hidden';
+            p.style.pointerEvents = 'none';
+        }
     });
-    tx.oncomplete = () => {
-        if(card) card.style.backgroundImage = `url('${URL.createObjectURL(files[0])}')`;
-        renderCalendar();
-        alert("已儲存！");
-    };
+
+    const isHome = currentPage === 1;
+    if(topBar) topBar.style.opacity = isHome ? 1 : 0;
+    if(bottomBar) bottomBar.style.opacity = isHome ? 1 : 0;
 }
+
+// 其他按鈕
+if(openProfileBtn) openProfileBtn.addEventListener('click', () => profilePage.classList.add('active'));
+if(closeProfileBtn) closeProfileBtn.addEventListener('click', () => profilePage.classList.remove('active'));
+if(logoutBtn) logoutBtn.addEventListener('click', () => alert('Log out'));
+if(editBtn) editBtn.addEventListener('click', () => {
+    editorPage.classList.add('active');
+    if(galleryGrid.children.length <= 1) setTimeout(() => { if(confirm("匯入相簿？")) multiPhotoInput.click(); }, 300);
+});
+if(closeEditorBtn) closeEditorBtn.addEventListener('click', () => editorPage.classList.remove('active'));
+if(realGalleryBtn) realGalleryBtn.addEventListener('click', () => multiPhotoInput.click());
+if(multiPhotoInput) multiPhotoInput.addEventListener('change', (e) => {
+    if(e.target.files.length) {
+        editorPreview.style.backgroundImage = `url('${URL.createObjectURL(e.target.files[0])}')`;
+        Array.from(e.target.files).forEach(f => {
+            const div = document.createElement('div'); div.className = 'gallery-item';
+            div.style.backgroundImage = `url('${URL.createObjectURL(f)}')`;
+            div.onclick = () => editorPreview.style.backgroundImage = `url('${URL.createObjectURL(f)}')`;
+            galleryGrid.appendChild(div);
+        });
+    }
+});
+if(tagPeopleBtn) tagPeopleBtn.addEventListener('click', () => alert("VIP Only"));
+if(tagLocationBtn) tagLocationBtn.addEventListener('click', () => prompt("Location:", "Taipei"));
+function getX(e) { return e.type.includes('mouse') ? e.pageX : e.touches[0].clientX; }
+function getY(e) { return e.type.includes('mouse') ? e.pageY : e.touches[0].clientY; }
