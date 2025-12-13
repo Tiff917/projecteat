@@ -10,7 +10,7 @@ const isVIP = true;
 
 // 🔥 資料庫強制升級 (解決多圖失敗問題)
 let db;
-const DB_NAME = 'GourmetApp_Final_v12'; 
+const DB_NAME = 'GourmetApp_Final_v13'; 
 const STORE_PHOTOS = 'photos';
 const STORE_POSTS = 'posts';
 const DB_VERSION = 1;
@@ -38,7 +38,7 @@ function initDB() {
     };
     request.onsuccess = (e) => {
         db = e.target.result;
-        console.log("資料庫連線成功 (v12)");
+        console.log("資料庫連線成功 (v13)");
         renderCalendar();
         renderCommunity(); 
     };
@@ -283,32 +283,39 @@ function renderCommunity() {
 
             card.querySelector('.like-btn').onclick = function() { this.classList.toggle('liked'); };
             
-            // 綁定開啟留言板
+            // 綁定開啟留言板 (這裡必須把 post 物件存起來，稍後用)
             const commentBtns = card.querySelectorAll('.comment-btn');
-            commentBtns.forEach(btn => btn.onclick = () => openCommentSheet(post));
+            commentBtns.forEach(btn => {
+                btn.onclick = () => {
+                    currentPost = post; // 存到全域變數
+                    openCommentSheet(post);
+                }
+            });
 
             container.appendChild(card);
         });
     };
 }
 
-// ⚠️ 留言板邏輯 (修正版)
+// ⚠️ 留言板邏輯 (修正版：綁定到 Window 全域)
+let currentPost = null;
+
 function openCommentSheet(post) {
     let sheet = document.getElementById('commentSheet');
-    // 如果是第一次開啟，建立 HTML 結構
     if(!sheet) {
         sheet = document.createElement('div'); sheet.id = 'commentSheet'; sheet.className = 'comment-sheet';
         const bd = document.createElement('div'); bd.id = 'commentBackdrop';
         bd.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:500;opacity:0;pointer-events:none;transition:opacity 0.3s;';
         document.body.appendChild(bd);
         
+        // ⚠️ 關鍵：Post 按鈕直接呼叫 window.sendComment()
         sheet.innerHTML = `
             <div class="comment-header">Comments <div class="close-comment-btn">&times;</div></div>
             <div class="comment-list" id="commentList"></div>
             <div class="comment-input-area">
                 <div class="feed-avatar" style="width:32px;height:32px;margin-right:10px;"></div>
                 <input type="text" class="comment-input" placeholder="Add a comment..." id="newCommentInput">
-                <div class="comment-send-btn" id="sendCommentBtn">Post</div>
+                <div class="comment-send-btn" onclick="sendComment()">Post</div>
             </div>
         `;
         document.body.appendChild(sheet);
@@ -326,28 +333,23 @@ function openCommentSheet(post) {
         list.appendChild(item);
     }
 
-    // 🔥 關鍵修正：重新綁定發送按鈕
-    const inp = document.getElementById('newCommentInput'); 
-    const send = document.getElementById('sendCommentBtn');
-    
-    // 移除舊的 event listener (複製節點法)
-    const newSend = send.cloneNode(true); 
-    send.parentNode.replaceChild(newSend, send);
-    
-    // 綁定新的點擊事件
-    newSend.onclick = () => {
-        if(inp.value.trim() !== '') {
-            const item = document.createElement('div'); item.className='comment-item';
-            item.innerHTML = `<div class="comment-avatar"></div><div class="comment-content"><span class="comment-user">Me</span> ${inp.value}<div class="comment-time">Just now</div></div>`;
-            list.appendChild(item); 
-            inp.value=''; 
-            list.scrollTop = list.scrollHeight;
-        }
-    };
-
     const bd = document.getElementById('commentBackdrop');
     setTimeout(() => { bd.style.opacity='1'; bd.style.pointerEvents='auto'; sheet.classList.add('active'); }, 10);
 }
+
+// 🔥 全域發送留言函式
+window.sendComment = function() {
+    const inp = document.getElementById('newCommentInput');
+    const list = document.getElementById('commentList');
+    
+    if(inp && inp.value.trim() !== '') {
+        const item = document.createElement('div'); item.className='comment-item';
+        item.innerHTML = `<div class="comment-avatar"></div><div class="comment-content"><span class="comment-user">Me</span> ${inp.value}<div class="comment-time">Just now</div></div>`;
+        list.appendChild(item);
+        inp.value = '';
+        list.scrollTop = list.scrollHeight;
+    }
+};
 
 window.updateCounter = function(carousel) {
     const width = carousel.offsetWidth;
