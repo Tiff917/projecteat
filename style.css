@@ -591,3 +591,21 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 }
 .story-nav-left { left: 0; }
 .story-nav-right { right: 0; }
+
+/* 確保日曆容器在最上層，且接收滑鼠事件 */
+#calendarDays {
+    position: relative;
+    z-index: 50 !important; /* 提高層級 */
+    pointer-events: auto !important; /* ⚠️ 關鍵：強制開啟點擊 */
+}
+
+/* 確保有照片的格子滑鼠會變成手型，且接收點擊 */
+.day-cell.has-photo {
+    cursor: pointer !important;
+    pointer-events: auto !important; /* ⚠️ 關鍵：強制開啟點擊 */
+}
+
+/* 確保格子裡面的內容不會擋住點擊 */
+.day-cell.has-photo * {
+    pointer-events: none;
+}
