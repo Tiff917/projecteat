@@ -65,7 +65,7 @@ async function loadExternalPages() {
 loadExternalPages();
 
 // ==========================================
-// 4. 編輯器邏輯 (修復多選)
+// 4. 編輯器邏輯 (修復版：多選開關)
 // ==========================================
 const editBtn = document.getElementById('editBtn');
 const editorPage = document.getElementById('editorPage');
@@ -74,15 +74,27 @@ const editorPreview = document.getElementById('editorPreview');
 const editorGrid = document.getElementById('editorGrid');
 const tagPeopleBtn = document.getElementById('tagPeopleBtn');
 const tagLocationBtn = document.getElementById('tagLocationBtn');
+const multiSelectBtn = document.getElementById('multiSelectBtn'); // 取得多選按鈕
 const publishBtn = document.getElementById('publishBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 
+// 多選模式狀態
+let isMultiSelectMode = false;
+
+// A. 進入編輯頁面
 if(editBtn) {
     editBtn.addEventListener('click', () => {
+        // 重置所有狀態
         currentEditFiles = [];
         currentEditLocation = null;
         currentEditTagged = false;
         
+        // 重置多選按鈕 (預設關閉)
+        isMultiSelectMode = false;
+        if(multiSelectBtn) multiSelectBtn.classList.remove('active');
+        if(multiPhotoInput) multiPhotoInput.removeAttribute('multiple'); // 移除多選屬性
+
+        // 重置其他 UI
         if(tagLocationBtn) tagLocationBtn.querySelector('#locationText').textContent = "";
         if(tagPeopleBtn) tagPeopleBtn.classList.remove('active');
         if(tagLocationBtn) tagLocationBtn.classList.remove('active');
@@ -95,23 +107,46 @@ if(editBtn) {
     });
 }
 
+// 🔥 B. 多選開關邏輯 (關鍵修復)
+if(multiSelectBtn) {
+    multiSelectBtn.addEventListener('click', () => {
+        isMultiSelectMode = !isMultiSelectMode; // 切換開關
+        
+        if (isMultiSelectMode) {
+            // 開啟多選
+            multiSelectBtn.classList.add('active');
+            multiPhotoInput.setAttribute('multiple', ''); // 加上屬性
+            alert("已開啟多選模式：現在您可以選取多張照片了！");
+        } else {
+            // 關閉多選
+            multiSelectBtn.classList.remove('active');
+            multiPhotoInput.removeAttribute('multiple'); // 移除屬性
+        }
+    });
+}
+
+// C. 渲染下方格子 (包含 + 按鈕)
 function renderInitialGrid() {
     editorGrid.innerHTML = '';
+    
+    // 建立 + 按鈕
     const addBtn = document.createElement('div');
     addBtn.className = 'gallery-add-btn';
     
-    // ⚠️ 關鍵修復：使用 Label 包裹，確保點擊一定觸發 Input
+    // 這裡改回使用單純的 div 點擊，因為我們要動態控制 input
     addBtn.innerHTML = `
-        <label for="multiPhotoInput" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;">
-            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Open
-        </label>
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Open
     `;
-    // 移除 JS onclick，改用 Label 的原生行為
-    addBtn.onclick = null; 
+    
+    // 點擊 + 號時觸發 Input
+    addBtn.onclick = () => {
+        if(multiPhotoInput) multiPhotoInput.click();
+    };
     
     editorGrid.appendChild(addBtn);
 
+    // 裝飾格子
     for(let i=0; i<7; i++) {
         const dummy = document.createElement('div');
         dummy.className = 'gallery-item';
@@ -120,9 +155,11 @@ function renderInitialGrid() {
     }
 }
 
+// D. 選圖後處理
 if(multiPhotoInput) {
     multiPhotoInput.addEventListener('change', (e) => {
         if(e.target.files.length > 0) {
+            // 如果是多選模式，可能是累加；這裡我們先做「覆蓋」邏輯比較簡單
             currentEditFiles = Array.from(e.target.files);
             renderEditorPreview();
         }
@@ -131,22 +168,23 @@ if(multiPhotoInput) {
 
 function renderEditorPreview() {
     if(currentEditFiles.length === 0) return;
+    
+    // 顯示第一張大圖
     const firstUrl = URL.createObjectURL(currentEditFiles[0]);
     editorPreview.innerHTML = ''; 
     editorPreview.style.backgroundImage = `url('${firstUrl}')`;
     
+    // 更新下方格子
     editorGrid.innerHTML = '';
     
-    // 重建 Label 按鈕
+    // 保持 + 按鈕在第一個
     const addBtn = document.createElement('div');
     addBtn.className = 'gallery-add-btn';
-    addBtn.innerHTML = `
-        <label for="multiPhotoInput" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;">
-            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        </label>
-    `;
+    addBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+    addBtn.onclick = () => multiPhotoInput.click();
     editorGrid.appendChild(addBtn);
 
+    // 顯示選中的照片
     currentEditFiles.forEach(file => {
         const div = document.createElement('div');
         div.className = 'gallery-item';
@@ -157,6 +195,7 @@ function renderEditorPreview() {
     });
 }
 
+// 其他按鈕邏輯保持不變...
 if(tagPeopleBtn) {
     tagPeopleBtn.addEventListener('click', () => {
         if(isVIP) {
@@ -199,12 +238,14 @@ if(publishBtn) {
         const memoryStore = tx.objectStore(STORE_PHOTOS);
         const postStore = tx.objectStore(STORE_POSTS);
 
+        // Memory 存單張
         currentEditFiles.forEach((file, index) => {
             memoryStore.add({
                 date: todayStr, time: timeStr, imageBlob: file, timestamp: now.getTime() + index
             });
         });
 
+        // 社群存多張
         if(isVIP) {
             postStore.add({
                 user: "My Account",
