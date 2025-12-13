@@ -191,25 +191,26 @@ if(tagPeopleBtn) {
 // D. 標註地點 (GPS)
 if(tagLocationBtn) {
     tagLocationBtn.addEventListener('click', () => {
-        if ("geolocation" in navigator) {
-            tagLocationBtn.classList.add('active');
-            const txt = document.getElementById('locationText');
-            if(txt) txt.textContent = "Locating...";
+        // 為了讓體驗更好，我們直接模擬定位成功
+        tagLocationBtn.classList.add('active');
+        const txt = document.getElementById('locationText');
+        
+        // 顯示載入中...
+        if(txt) txt.textContent = "Locating...";
+        
+        // 模擬 0.5 秒後定位到高雄
+        setTimeout(() => {
+            // 這裡設定你想要顯示的地點名稱
+            const locationName = "Kaohsiung City"; 
             
-            navigator.geolocation.getCurrentPosition((position) => {
-                const lat = position.coords.latitude.toFixed(2);
-                const lng = position.coords.longitude.toFixed(2);
-                currentEditLocation = `Taipei (${lat}, ${lng})`;
-                if(txt) txt.textContent = "Taipei";
-                alert(`定位成功：${currentEditLocation}`);
-            }, (error) => {
-                alert("無法定位");
-                tagLocationBtn.classList.remove('active');
-                if(txt) txt.textContent = "";
-            });
-        } else {
-            alert("瀏覽器不支援定位");
-        }
+            // 寫入變數
+            currentEditLocation = locationName;
+            
+            // 更新 UI 文字
+            if(txt) txt.textContent = "Kaohsiung";
+            
+            alert(`定位成功：${locationName}`);
+        }, 500);
     });
 }
 
