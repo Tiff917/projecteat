@@ -1,4 +1,4 @@
-/* style.css (終極修正版) */
+/* style.css (完整版) */
 
 /* 1. 基礎設定 */
 * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
@@ -13,10 +13,8 @@ body { background-color: var(--bg-color); width: 100vw; height: 100vh; overflow:
     padding-top: 80px; padding-bottom: 100px; overflow: hidden; 
 }
 
-/* Memory 頁面 */
+/* 頁面特定調整 */
 #page-memory { justify-content: flex-start; padding-top: 15px !important; z-index: 50; }
-
-/* 社群頁面滿版 */
 #page-community { width: 100%; padding: 80px 0 0 0 !important; justify-content: flex-start; background-color: #fff; }
 
 .page-content-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; }
@@ -58,7 +56,7 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .calendar-controls { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 10px; }
 .month-nav-btn { background: none; border: none; font-size: 20px; color: #8D6E63; cursor: pointer; padding: 5px 10px; font-weight: bold; }
 
-/* 6. 社群貼文 (Feed Card) - 1:1 正方形修復 */
+/* 6. 社群貼文 (Feed Card) - 強制正方形修復 */
 .feed-card {
     width: 100% !important; margin: 0 !important; border-bottom: 1px solid #efefef;
     padding-bottom: 10px; border-radius: 0 !important; box-shadow: none !important;
@@ -71,26 +69,26 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .feed-location { font-size: 11px; color: #999; }
 .vip-badge { background: #FFD700; color: #000; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 5px; font-weight: bold; }
 
-/* ⚠️ 輪播容器設定：強制橫向排列 */
+/* ⚠️ 輪播容器：強制寬高都等於螢幕寬度 (100vw) */
 .feed-carousel {
     display: flex; 
     overflow-x: auto; 
     scroll-snap-type: x mandatory;
-    width: 100%; 
-    aspect-ratio: 1 / 1; /* 容器本身要是正方形 */
+    width: 100vw; 
+    height: 100vw !important; /* 強制正方形 */
     scrollbar-width: none;
 }
 .feed-carousel::-webkit-scrollbar { display: none; }
 
-/* ⚠️ 圖片設定：強制正方形且不被壓縮 */
+/* ⚠️ 圖片：強制寬高都等於螢幕寬度 (100vw) */
 .feed-image {
-    min-width: 100%; /* 每個圖片都要佔滿寬度 */
-    aspect-ratio: 1 / 1; /* 強制 1:1 */
+    width: 100vw !important;
+    height: 100vw !important;
     background-size: cover; 
     background-position: center; 
     background-color: #eee;
     scroll-snap-align: start;
-    flex-shrink: 0; /* 禁止被壓縮 */
+    flex-shrink: 0;
 }
 
 .feed-counter { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6); color: white; font-size: 12px; padding: 4px 10px; border-radius: 12px; pointer-events: none; }
@@ -111,8 +109,7 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .comment-sheet {
     position: fixed; bottom: 0; left: 0; width: 100%; height: 75%;
     background-color: #fff; border-radius: 20px 20px 0 0;
-    z-index: 99999 !important; /* 確保在最上面 */
-    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 99999 !important; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     display: flex; flex-direction: column; box-shadow: 0 -5px 30px rgba(0,0,0,0.15);
 }
 .comment-sheet.active { transform: translateY(0); }
