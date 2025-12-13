@@ -19,7 +19,7 @@ body { background-color: var(--bg-color); width: 100vw; height: 100vh; overflow:
 /* Memory 頁面特殊設定 (靠上對齊) */
 #page-memory { 
     justify-content: flex-start; 
-    padding-top: 70px !important; /* 修正標題高度 */
+    padding-top: 40px !important; /* 修正標題高度 */
     z-index: 50; /* 提高層級，確保日曆可點 */
 }
 
@@ -74,7 +74,7 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .story-img-box { width: 100%; height: 100%; background-size: contain; background-repeat: no-repeat; background-position: center; }
 
 /* 頂部進度條 */
-.story-progress-bar { position: absolute; top: 10px; left: 5px; right: 5px; display: flex; gap: 3px; z-index: 30; }
+.story-progress-bar { position: absolute; bottom: 20px; left: 5px; right: 5px; display: flex; gap: 3px; z-index: 30; }
 .progress-segment { flex: 1; height: 3px; background-color: rgba(255, 255, 255, 0.3); border-radius: 2px; }
 .progress-segment.active { background-color: rgba(255, 255, 255, 1); }
 
