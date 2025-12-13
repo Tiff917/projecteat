@@ -1,44 +1,48 @@
-/* --- 1. 基礎設定 --- */
-* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; }
+/* style.css (最終修正版) */
+
+/* 1. 基礎設定 */
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
 :root { --bg-color: #F2EBE0; --primary-brown: #8D6E63; --text-dark: #5D4037; --card-size: min(85vw, 400px); }
 body { background-color: var(--bg-color); width: 100vw; height: 100vh; overflow: hidden; position: fixed; }
 
-/* --- 2. 滑動軌道 --- */
+/* 2. 滑動軌道 */
 .carousel-track { display: flex; width: 300%; height: 100%; transform: translateX(-33.333%); will-change: transform; }
-
-/* 頁面容器 */
 .page-container {
-    width: 33.333%; height: 100%; flex-shrink: 0;
-    position: relative; z-index: 1;
-    display: flex; flex-direction: column; align-items: center; 
-    justify-content: center; /* 垂直置中 */
-    padding-top: 80px; padding-bottom: 100px; /* 避開上下 Bar */
-    overflow: hidden; 
+    width: 33.333%; height: 100%; flex-shrink: 0; position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding-top: 80px; padding-bottom: 100px; overflow: hidden; 
 }
 
-/* Memory 頁面特殊設定 (靠上對齊) */
+/* ⚠️ Memory 頁面位置修正 */
 #page-memory { 
     justify-content: flex-start; 
-    padding-top: 80px !important; 
-    z-index: 50; /* 提高層級，確保日曆可點 */
+    padding-top: 15px !important; 
+    z-index: 50; 
+}
+
+/* ⚠️ 社群頁面滿版設定 */
+#page-community {
+    width: 100%;
+    padding-left: 0 !important; padding-right: 0 !important;
+    padding-top: 80px !important;
+    justify-content: flex-start;
+    background-color: #fff;
 }
 
 .page-content-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; }
-.loading-text { color: #aaa; font-size: 14px; }
 
-/* --- 3. Home Card --- */
+/* 3. Home Card */
 .card {
     width: var(--card-size); height: var(--card-size); aspect-ratio: 1/1;
     background-color: #ddd; border-radius: 35px;
     background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80');
     background-size: cover; background-position: center;
     box-shadow: 0 15px 30px rgba(93, 64, 55, 0.15);
-    position: relative; overflow: hidden; margin: 0 auto; flex-shrink: 0;
-    z-index: 5;
+    position: relative; overflow: hidden; margin: 0 auto; flex-shrink: 0; z-index: 5;
 }
 .card::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(30, 30, 30, 0.6); z-index: 2; }
 
-/* --- 4. UI 元件 (Bars) --- */
+/* 4. Bars */
 .top-bar, .bottom-bar {
     position: fixed; left: 50%; transform: translateX(-50%); width: 86%;
     display: flex; align-items: center; padding: 0 5px;
@@ -46,8 +50,6 @@ body { background-color: var(--bg-color); width: 100vw; height: 100vh; overflow:
 }
 .top-bar { top: max(60px, env(safe-area-inset-top)); justify-content: space-between; }
 .bottom-bar { bottom: max(50px, env(safe-area-inset-bottom)); justify-content: center; gap: 60px; }
-
-/* 按鈕樣式 */
 .btn-container { pointer-events: auto; cursor: pointer; transition: transform 0.1s; display: flex; justify-content: center; align-items: center; }
 .btn-container:active { transform: scale(0.92); }
 .avatar, .notification { width: 55px; height: 55px; background-color: #947867; border-radius: 50%; }
@@ -57,276 +59,98 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .icon-white svg { stroke: white; stroke-width: 2; }
 .icon-brown svg { stroke: #8D6E63; stroke-width: 2.5; width: 32px; height: 32px; }
 
-/* --- 5. 日曆樣式 (Calendar) --- */
+/* 5. Calendar */
 .calendar-container { width: 90%; max-width: 350px; margin: 0 auto; position: relative; z-index: 100 !important; pointer-events: auto !important; }
 .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 15px; }
 .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; row-gap: 20px; }
 .day-cell { width: 100%; aspect-ratio: 1/1; display: flex; justify-content: center; align-items: center; font-size: 16px; color: #9E9E9E; border-radius: 50%; cursor: pointer; position: relative; z-index: 101; }
 .day-cell.has-photo { background-size: cover; background-position: center; color: transparent; box-shadow: 0 2px 5px rgba(0,0,0,0.2); pointer-events: auto !important; }
-
-/* 日曆導航按鈕 */
 .calendar-controls { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 10px; }
 .month-nav-btn { background: none; border: none; font-size: 20px; color: #8D6E63; cursor: pointer; padding: 5px 10px; font-weight: bold; }
 
-/* --- 6. 限時動態播放器 (Story Mode) --- */
+/* 6. 社群貼文 (Feed Card) */
+.feed-card {
+    width: 100% !important; margin: 0 !important; border-bottom: 1px solid #efefef;
+    padding-bottom: 10px; border-radius: 0 !important; box-shadow: none !important;
+    position: relative;
+}
+.feed-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; }
+.feed-user-info { display: flex; align-items: center; gap: 10px; }
+.feed-avatar { width: 32px; height: 32px; background: #ddd; border-radius: 50%; }
+.feed-username { font-weight: bold; font-size: 14px; color: #333; }
+.feed-location { font-size: 11px; color: #999; }
+.vip-badge { background: #FFD700; color: #000; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 5px; font-weight: bold; }
+
+/* ⚠️ 關鍵：強制貼文圖片正方形 */
+.feed-carousel {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    width: 100%; 
+    aspect-ratio: 1 / 1 !important; /* 1:1 比例 */
+    scrollbar-width: none;
+}
+.feed-carousel::-webkit-scrollbar { display: none; }
+.feed-image {
+    width: 100%; 
+    aspect-ratio: 1 / 1 !important; /* 圖片也要 1:1 */
+    background-size: cover; background-position: center; background-color: #eee;
+    flex-shrink: 0; scroll-snap-align: start;
+}
+.feed-counter {
+    position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6);
+    color: white; font-size: 12px; padding: 4px 10px; border-radius: 12px; pointer-events: none;
+}
+.feed-actions { display: flex; gap: 15px; padding: 10px 15px; }
+.feed-likes { padding: 0 15px; font-size: 13px; font-weight: bold; color: #333; margin-bottom: 5px; }
+.feed-actions svg.liked { fill: #ED4956; stroke: #ED4956; animation: likeBounce 0.3s ease; }
+@keyframes likeBounce { 0% {transform:scale(1);} 50% {transform:scale(1.2);} 100% {transform:scale(1);} }
+
+/* 7. Story Mode */
 #storyPage { background-color: #000; }
 .story-container { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
 .story-img-box { width: 100%; height: 100%; background-size: contain; background-repeat: no-repeat; background-position: center; }
-
-/* ⚠️ 關鍵修正：進度條強制在底部 */
-.story-progress-bar { 
-    position: absolute; 
-    top: auto !important; /* 取消頂部定位 */
-    bottom: 50px !important; /* 設定在底部 (避開手機安全區) */
-    left: 5px; 
-    right: 5px; 
-    display: flex; 
-    gap: 3px; 
-    z-index: 99999 !important; /* 確保最上層 */
-}
+.story-progress-bar { position: absolute; bottom: 60px !important; top: auto !important; left: 20px; right: 20px; display: flex; gap: 5px; z-index: 99999 !important; }
 .progress-segment { flex: 1; height: 3px; background-color: rgba(255, 255, 255, 0.3); border-radius: 2px; }
-.progress-segment.active { background-color: rgba(255, 255, 255, 1); }
+.progress-segment.active { background-color: #fff; }
 
-/* --- 7. Action Sheet (選單) --- */
+/* 8. 留言板 (Comment Sheet) */
+.comment-sheet {
+    position: fixed; bottom: 0; left: 0; width: 100%; height: 75%;
+    background-color: #fff; border-radius: 20px 20px 0 0;
+    z-index: 99999 !important; /* 確保在最上面 */
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: flex; flex-direction: column; box-shadow: 0 -5px 30px rgba(0,0,0,0.15);
+}
+.comment-sheet.active { transform: translateY(0); }
+.comment-header { height: 50px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333; position: relative; }
+.close-comment-btn { position: absolute; right: 15px; top: 0; height: 50px; display: flex; align-items: center; cursor: pointer; font-size: 24px; color: #999; }
+.comment-list { flex: 1; overflow-y: auto; padding: 15px; }
+.comment-item { display: flex; gap: 12px; margin-bottom: 20px; }
+.comment-avatar { width: 36px; height: 36px; background: #ddd; border-radius: 50%; flex-shrink: 0; }
+.comment-content { font-size: 14px; line-height: 1.4; color: #333; }
+.comment-user { font-weight: bold; margin-right: 5px; color: #000; }
+.comment-time { font-size: 11px; color: #999; margin-top: 4px; }
+.comment-input-area { height: 60px; border-top: 1px solid #eee; display: flex; align-items: center; padding: 0 15px; background: #fff; padding-bottom: env(safe-area-inset-bottom); }
+.comment-input { flex: 1; height: 40px; border: 1px solid #ddd; border-radius: 20px; padding: 0 15px; font-size: 14px; outline: none; }
+.comment-send-btn { margin-left: 10px; color: #8D6E63; font-weight: bold; cursor: pointer; padding: 5px 10px; }
+
+/* 9. 其他介面 */
+.action-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--bg-color); border-radius: 35px 35px 0 0; padding: 10px 25px 40px 25px; transform: translateY(100%); z-index: 450; transition: transform 0.3s; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); }
+.sheet-handle-area { width: 100%; height: 30px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; }
+.sheet-handle { width: 40px; height: 5px; background-color: #D7CCC8; border-radius: 10px; }
+.sheet-option { display: flex; align-items: center; padding: 18px 0; border-bottom: 1px solid #E0D4C8; color: var(--text-dark); font-weight: 600; cursor: pointer; }
+.sheet-option svg { width: 24px; height: 24px; margin-right: 15px; stroke: var(--primary-brown); fill: none; stroke-width: 2; }
 .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; z-index: 400; transition: opacity 0.3s; }
 .modal-backdrop.active { opacity: 1; pointer-events: auto; }
-
-.action-sheet { 
-    position: fixed; bottom: 0; left: 0; width: 100%; 
-    background-color: var(--bg-color); 
-    border-top-left-radius: 35px; border-top-right-radius: 35px; 
-    padding: 10px 25px 30px 25px; 
-    padding-bottom: max(30px, env(safe-area-inset-bottom));
-    transform: translateY(100%); z-index: 450; 
-    box-shadow: 0 -10px 30px rgba(0,0,0,0.1); 
-    transition: transform 0.3s; 
-}
-.sheet-handle-area { width: 100%; height: 40px; display: flex; justify-content: center; align-items: center; }
-.sheet-handle { width: 20px; height: 5px; background-color: #D7CCC8; border-radius: 10px; }
-.sheet-option { 
-    display: flex; align-items: center; 
-    padding: 18px 0; 
-    border-bottom: 1px solid #E0D4C8; 
-    color: var(--text-dark); 
-    font-weight: 600; 
-    cursor: pointer;
-}
-.sheet-option svg { width: 24px; height: 24px; margin-right: 15px; stroke: var(--primary-brown); }
-
-/* --- 8. 其他頁面 --- */
 .profile-page, .editor-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); z-index: 300; transform: translateX(-100%); transition: transform 0.3s; display: flex; flex-direction: column; }
 .profile-page.active { transform: translateX(0); }
 .editor-page { transform: translateY(100%); z-index: 600; }
 .editor-page.active { transform: translateY(0); }
 .gallery-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; overflow-y: auto; padding-top: 2px; flex: 1; }
 .gallery-item { aspect-ratio: 1/1; background-color: #eee; background-size: cover; }
-.preview-area { width: 100%; height: 45vh; background-color: #ddd; background-size: cover; background-position: center; }
-.editor-header { height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-top: 50px; }
+.preview-area { width: 100%; aspect-ratio: 1/1 !important; background-color: #ddd; background-size: cover; background-position: center; }
+.editor-header { height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-top: 10px !important; }
 .editor-tools-bar { display: flex; gap: 10px; padding: 10px 15px; }
 .tool-capsule { height: 36px; background: rgba(141, 110, 99, 0.1); border-radius: 18px; padding: 0 12px; display: flex; align-items: center; justify-content: center; }
-
-/* style.css 新增部分 */
-
-/* --- 編輯頁面優化 --- */
-.editor-tools-bar {
-    display: flex; gap: 10px; padding: 15px 20px;
-    background-color: var(--bg-color);
-}
-.tool-capsule {
-    height: 36px; 
-    background-color: rgba(141, 110, 99, 0.2); /* 淺褐色 */
-    border-radius: 18px; 
-    padding: 0 15px; 
-    display: flex; align-items: center; justify-content: center;
-    color: var(--text-dark); cursor: pointer;
-}
-.tool-capsule.active {
-    background-color: var(--primary-brown);
-    color: white;
-}
-.tool-capsule.right {
-    margin-left: auto;
-    background-color: rgba(141, 110, 99, 0.8);
-    color: white; font-size: 12px; font-weight: bold; gap: 6px;
-}
-.next-btn { color: #8D6E63; font-weight: bold; font-size: 16px; }
-
-/* --- 社群頁面 (Feed) 樣式 --- */
-.feed-card {
-    width: 100% !important;
-    margin: 0 !important; /* ⚠️ 關鍵：移除所有外部間距 */
-    border-bottom: 1px solid #efefef; /* 僅用細線分隔 */
-    padding-bottom: 15px; /* 內部稍微留白 */
-    border-radius: 0 !important;
-    box-shadow: none !important;
-}
-.feed-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 15px;
-}
-.feed-user-info { display: flex; align-items: center; gap: 10px; }
-.feed-avatar { width: 32px; height: 32px; background: #ddd; border-radius: 50%; }
-.feed-username { font-weight: bold; font-size: 14px; color: #333; }
-.feed-location { font-size: 11px; color: #999; }
-.feed-image {
-    width: 100%; aspect-ratio: 4/5; /* Instagram 比例 */
-    background-size: cover; background-position: center;
-    background-color: #eee;
-}
-.feed-actions {
-    display: flex; gap: 15px; padding: 12px 15px;
-}
-.feed-likes {
-    padding: 0 15px; font-size: 13px; font-weight: bold; color: #333;
-}
-.feed-caption {
-    padding: 5px 15px 15px 15px; font-size: 13px; color: #555; line-height: 1.4;
-}
-.vip-badge {
-    background: #FFD700; color: #000; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 5px; font-weight: bold;
-}
-/* style.css 新增 */
-
-/* 編輯器下方：開啟相簿的按鈕 */
-.gallery-add-btn {
-    width: 100%;
-    aspect-ratio: 1/1;
-    background-color: #EFEBE9; /* 淺褐色背景 */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    border: 2px dashed #8D6E63; /* 虛線框 */
-    box-sizing: border-box;
-    color: #8D6E63;
-    font-weight: bold;
-    font-size: 14px;
-}
-
-.gallery-add-btn svg {
-    width: 30px;
-    height: 30px;
-    margin-bottom: 5px;
-    stroke: #8D6E63;
-}
-
-/* 讓預覽區預設顯示提示文字 */
-.preview-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: #999;
-    font-size: 16px;
-    background-color: #f0f0f0;
-}
-
-/* style.css (請加在最後面) */
-
-/* === 修正 1：社群頁面滿版設定 === */
-/* 讓社群頁面填滿寬度，並靠上對齊 */
-#page-community {
-    justify-content: flex-start; /* 內容靠上 */
-    padding-top: 80px !important; /* 避開 Top Bar */
-    padding-bottom: 0 !important;
-    width: 100%; /* 確保滿版 */
-}
-
-/* style.css (最終修正補丁) */
-
-/* === 修正 1：社群頁面滿版 (Instagram 風格) === */
-#page-community {
-    width: 100%;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    /* 保持 padding-top 避開 Top Bar，但左右要貼齊 */
-}
-
-/* 讓貼文卡片變成滿版寬度 */
-.feed-card {
-    width: 100% !important;
-    margin: 0 !important; /* ⚠️ 關鍵：移除所有外部間距 */
-    border-bottom: 1px solid #efefef; /* 僅用細線分隔 */
-    padding-bottom: 15px; /* 內部稍微留白 */
-    border-radius: 0 !important;
-    box-shadow: none !important;
-}
-
-/* 3. 確保容器沒有內縮 */
-#feedContainer {
-    width: 100%;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-
-/* === 修正 2：編輯照片視窗變正方形 === */
-.preview-area {
-    width: 100%;
-    aspect-ratio: 1 / 1 !important; /* 強制正方形比例 */
-    height: auto !important; /* 覆蓋原本的 45vh 高度設定 */
-    
-    /* 確保圖片填滿且置中 */
-    background-size: cover;
-    background-position: center;
-    background-color: #ddd;
-}
-
-
-/* === 修正 3：編輯頁面頂部文字距離 Top 10px === */
-.editor-header {
-    /* 原本是 50px 或 25px，這裡強制改為 10px */
-    margin-top: 10px !important; 
-    
-    /* 建議：加上這行以避開手機瀏海 (若不需要可刪除) */
-    padding-top: env(safe-area-inset-top); 
-    
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-/* 1. 修正貼文圖片為正方形 (1:1) */
-.feed-image {
-    width: 100%;
-    aspect-ratio: 1 / 1 !important; /* 強制正方形 */
-    background-size: cover;
-    background-position: center;
-    background-color: #eee;
-    flex-shrink: 0; /* 防止被壓縮 */
-    scroll-snap-align: start; /* 這裡讓它滑動時會「吸附」 */
-}
-
-/* 2. 建立可左右滑動的容器 */
-.feed-carousel {
-    display: flex;
-    overflow-x: auto; /* 允許橫向捲動 */
-    scroll-snap-type: x mandatory; /* 強制滑動吸附效果 */
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    
-    /* 隱藏捲軸 (美觀) */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none;  /* IE 10+ */
-}
-.feed-carousel::-webkit-scrollbar { 
-    display: none; /* Chrome/Safari */
-}
-
-/* 3. 圖片計數器 (右上角顯示 1/3) */
-.feed-counter {
-    position: absolute;
-    top: 15px; right: 15px;
-    background: rgba(0, 0, 0, 0.6);
-    color: white;
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 12px;
-    pointer-events: none;
-}
-
-/* 確保 Feed Card 的 header 和 footer 不會跑版 */
-.feed-card {
-    position: relative; /* 為了定位計數器 */
-}
+.gallery-add-btn { width: 100%; aspect-ratio: 1/1; background-color: #EFEBE9; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border: 2px dashed #8D6E63; color: #8D6E63; font-weight: bold; font-size: 14px; }
+.gallery-add-btn svg { width: 30px; height: 30px; margin-bottom: 5px; stroke: #8D6E63; }
+.preview-placeholder { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; color: #999; font-size: 16px; background-color: #f0f0f0; }
