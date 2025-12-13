@@ -75,7 +75,7 @@ loadExternalPages();
 // ==========================================
 const editBtn = document.getElementById('editBtn');
 const editorPage = document.getElementById('editorPage');
-const multiPhotoInput = document.getElementById('multiPhotoInput'); // 借用原本的多選 input
+const multiPhotoInput = document.getElementById('multiPhotoInput'); 
 const editorPreview = document.getElementById('editorPreview');
 const editorGrid = document.getElementById('editorGrid');
 const tagPeopleBtn = document.getElementById('tagPeopleBtn');
@@ -83,150 +83,195 @@ const tagLocationBtn = document.getElementById('tagLocationBtn');
 const publishBtn = document.getElementById('publishBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 
-// A. 開啟編輯器
+// A. 開啟編輯器 (直接進入，不跳彈窗)
 if(editBtn) {
     editBtn.addEventListener('click', () => {
-        // 先重置狀態
+        // 1. 重置變數
         currentEditFiles = [];
         currentEditLocation = null;
         currentEditTagged = false;
-        tagLocationBtn.querySelector('#locationText').textContent = "";
-        tagPeopleBtn.classList.remove('active');
-        tagLocationBtn.classList.remove('active');
         
-        // 開啟選圖
-        setTimeout(() => {
-            if(confirm("請選擇照片以開始編輯")) {
-                multiPhotoInput.click();
-            }
-        }, 100);
+        // 2. 重置 UI 狀態
+        if(tagLocationBtn) tagLocationBtn.querySelector('#locationText').textContent = "";
+        if(tagPeopleBtn) tagPeopleBtn.classList.remove('active');
+        if(tagLocationBtn) tagLocationBtn.classList.remove('active');
+        
+        // 3. 重置預覽區 (顯示空白或提示)
+        editorPreview.innerHTML = `<div class="preview-placeholder">Select photos from gallery below</div>`;
+        editorPreview.style.backgroundImage = 'none';
+
+        // 4. 重置下方圖庫 (顯示 "開啟相簿" 按鈕)
+        renderInitialGrid();
+
+        // 5. 直接滑出頁面
+        editorPage.classList.add('active');
     });
 }
 
-// B. 選圖後顯示
+// 輔助：渲染初始狀態 (只有一顆加號按鈕)
+function renderInitialGrid() {
+    editorGrid.innerHTML = '';
+    
+    // 建立 "開啟相簿" 按鈕
+    const addBtn = document.createElement('div');
+    addBtn.className = 'gallery-add-btn';
+    addBtn.innerHTML = `
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Open
+    `;
+    // 點擊這個按鈕，才觸發手機相簿
+    addBtn.onclick = () => multiPhotoInput.click();
+    
+    editorGrid.appendChild(addBtn);
+
+    // 補幾個灰色空格子裝飾 (讓它看起來像還沒載入)
+    for(let i=0; i<7; i++) {
+        const dummy = document.createElement('div');
+        dummy.className = 'gallery-item';
+        dummy.style.backgroundColor = '#f5f5f5';
+        dummy.style.cursor = 'default';
+        editorGrid.appendChild(dummy);
+    }
+}
+
+// B. 選圖後顯示 (當使用者真的選了照片)
 if(multiPhotoInput) {
     multiPhotoInput.addEventListener('change', (e) => {
         if(e.target.files.length > 0) {
             currentEditFiles = Array.from(e.target.files);
-            editorPage.classList.add('active');
             renderEditorPreview();
         }
     });
 }
 
+// 渲染選中的照片
 function renderEditorPreview() {
     if(currentEditFiles.length === 0) return;
     
-    // 大圖
+    // 1. 設定大圖
     const firstUrl = URL.createObjectURL(currentEditFiles[0]);
+    editorPreview.innerHTML = ''; // 清掉提示文字
     editorPreview.style.backgroundImage = `url('${firstUrl}')`;
     
-    // 下方小圖網格
+    // 2. 更新下方格子
     editorGrid.innerHTML = '';
+    
+    // 第一格還是保留 "加號" (如果要讓使用者加選，或是重新選)
+    const addBtn = document.createElement('div');
+    addBtn.className = 'gallery-add-btn';
+    addBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+    addBtn.onclick = () => multiPhotoInput.click();
+    editorGrid.appendChild(addBtn);
+
+    // 列出所有選中的照片
     currentEditFiles.forEach(file => {
         const div = document.createElement('div');
         div.className = 'gallery-item';
         const url = URL.createObjectURL(file);
         div.style.backgroundImage = `url('${url}')`;
+        // 點擊切換大圖
         div.onclick = () => editorPreview.style.backgroundImage = `url('${url}')`;
         editorGrid.appendChild(div);
     });
 }
 
 // C. 標註朋友 (VIP 檢查)
-tagPeopleBtn.addEventListener('click', () => {
-    if(isVIP) {
-        currentEditTagged = !currentEditTagged;
-        tagPeopleBtn.classList.toggle('active', currentEditTagged);
-        alert(currentEditTagged ? "已標註朋友！" : "取消標註");
-    } else {
-        alert("🔒 這是付費會員專屬功能！\n請升級以解鎖標註朋友與發佈到社群的功能。");
-    }
-});
-
-// D. 標註地點 (PWA GPS)
-tagLocationBtn.addEventListener('click', () => {
-    if ("geolocation" in navigator) {
-        tagLocationBtn.classList.add('active');
-        document.getElementById('locationText').textContent = "Locating...";
-        
-        navigator.geolocation.getCurrentPosition((position) => {
-            // 這裡抓到的是經緯度，實務上會接 Google Maps API 轉成地名
-            // 這裡我們先模擬顯示一個地名
-            const lat = position.coords.latitude.toFixed(2);
-            const lng = position.coords.longitude.toFixed(2);
-            currentEditLocation = `Taipei City (${lat}, ${lng})`;
-            
-            document.getElementById('locationText').textContent = "Taipei City"; // 簡化顯示
-            alert(`已定位成功：${currentEditLocation}`);
-        }, (error) => {
-            alert("無法抓取位置，請確認已允許權限。");
-            tagLocationBtn.classList.remove('active');
-            document.getElementById('locationText').textContent = "";
-        });
-    } else {
-        alert("您的瀏覽器不支援地理定位");
-    }
-});
-
-// E. 關閉
-cancelEditBtn.addEventListener('click', () => {
-    editorPage.classList.remove('active');
-});
-
-// F. 發佈貼文 (核心邏輯)
-publishBtn.addEventListener('click', () => {
-    if(currentEditFiles.length === 0) return;
-
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    // 1. 一律存入 Memory (個人回憶)
-    const tx = db.transaction([STORE_PHOTOS, STORE_POSTS], 'readwrite');
-    const memoryStore = tx.objectStore(STORE_PHOTOS);
-    const postStore = tx.objectStore(STORE_POSTS);
-
-    // 儲存照片到 Memory
-    currentEditFiles.forEach((file, index) => {
-        memoryStore.add({
-            date: todayStr,
-            time: timeStr,
-            imageBlob: file,
-            timestamp: now.getTime() + index
-        });
+if(tagPeopleBtn) {
+    tagPeopleBtn.addEventListener('click', () => {
+        if(isVIP) {
+            currentEditTagged = !currentEditTagged;
+            tagPeopleBtn.classList.toggle('active', currentEditTagged);
+            alert(currentEditTagged ? "已標註朋友！" : "取消標註");
+        } else {
+            alert("🔒 這是付費會員專屬功能！");
+        }
     });
+}
 
-    // 2. 如果是 VIP，則發佈到社群
-    if(isVIP) {
-        // 建立一篇貼文物件
-        const newPost = {
-            user: "My Account",
-            avatar: "", // 預設
-            location: currentEditLocation || "Unknown Location",
-            imageBlob: currentEditFiles[0], // 社群只顯示第一張當封面
-            likes: 0,
-            caption: currentEditTagged ? "With friends! ❤️" : "Just posted a photo.",
-            timestamp: now.getTime(),
-            isVIP: true
-        };
-        postStore.add(newPost);
-    }
+// D. 標註地點 (GPS)
+if(tagLocationBtn) {
+    tagLocationBtn.addEventListener('click', () => {
+        if ("geolocation" in navigator) {
+            tagLocationBtn.classList.add('active');
+            const txt = document.getElementById('locationText');
+            if(txt) txt.textContent = "Locating...";
+            
+            navigator.geolocation.getCurrentPosition((position) => {
+                const lat = position.coords.latitude.toFixed(2);
+                const lng = position.coords.longitude.toFixed(2);
+                currentEditLocation = `Taipei (${lat}, ${lng})`;
+                if(txt) txt.textContent = "Taipei";
+                alert(`定位成功：${currentEditLocation}`);
+            }, (error) => {
+                alert("無法定位");
+                tagLocationBtn.classList.remove('active');
+                if(txt) txt.textContent = "";
+            });
+        } else {
+            alert("瀏覽器不支援定位");
+        }
+    });
+}
 
-    tx.oncomplete = () => {
-        alert(isVIP ? "發佈成功！已存入回憶並分享至社群。" : "已存入個人回憶！(升級會員可分享至社群)");
+// E. 關閉編輯器
+if(cancelEditBtn) {
+    cancelEditBtn.addEventListener('click', () => {
         editorPage.classList.remove('active');
-        
-        // 更新 UI
-        renderCalendar();
-        if(isVIP) renderCommunity();
-        
-        // 更新首頁卡片
-        const firstUrl = URL.createObjectURL(currentEditFiles[0]);
-        if(card) card.style.backgroundImage = `url('${firstUrl}')`;
-    };
-});
+    });
+}
 
+// F. 發佈貼文
+if(publishBtn) {
+    publishBtn.addEventListener('click', () => {
+        if(currentEditFiles.length === 0) {
+            alert("請先選擇照片！");
+            return;
+        }
+
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const tx = db.transaction([STORE_PHOTOS, STORE_POSTS], 'readwrite');
+        const memoryStore = tx.objectStore(STORE_PHOTOS);
+        const postStore = tx.objectStore(STORE_POSTS);
+
+        // 存入 Memory
+        currentEditFiles.forEach((file, index) => {
+            memoryStore.add({
+                date: todayStr,
+                time: timeStr,
+                imageBlob: file,
+                timestamp: now.getTime() + index
+            });
+        });
+
+        // 存入社群 (VIP)
+        if(isVIP) {
+            postStore.add({
+                user: "My Account",
+                avatar: "",
+                location: currentEditLocation || "Unknown",
+                imageBlob: currentEditFiles[0],
+                likes: 0,
+                caption: currentEditTagged ? "With friends! ❤️" : "New post ✨",
+                timestamp: now.getTime(),
+                isVIP: true
+            });
+        }
+
+        tx.oncomplete = () => {
+            alert("發佈成功！");
+            editorPage.classList.remove('active');
+            renderCalendar();
+            if(isVIP) renderCommunity();
+            // 更新首頁封面
+            if(card && currentEditFiles.length > 0) {
+                card.style.backgroundImage = `url('${URL.createObjectURL(currentEditFiles[0])}')`;
+            }
+        };
+    });
+}
 // ==========================================
 // 5. 社群頁面渲染 (Community Feed)
 // ==========================================
