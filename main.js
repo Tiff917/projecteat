@@ -223,7 +223,7 @@ if(cancelEditBtn) {
     });
 }
 
-// F. 發佈貼文
+// F. 發佈貼文 (支援多圖版)
 if(publishBtn) {
     publishBtn.addEventListener('click', () => {
         if(currentEditFiles.length === 0) {
@@ -239,7 +239,7 @@ if(publishBtn) {
         const memoryStore = tx.objectStore(STORE_PHOTOS);
         const postStore = tx.objectStore(STORE_POSTS);
 
-        // 存入 Memory
+        // 1. 存入 Memory (每一張都拆開存，因為日曆是看單張的)
         currentEditFiles.forEach((file, index) => {
             memoryStore.add({
                 date: todayStr,
@@ -249,13 +249,16 @@ if(publishBtn) {
             });
         });
 
-        // 存入社群 (VIP)
+        // 2. 存入社群 (VIP) - ⚠️ 關鍵修改：存入整個陣列
         if(isVIP) {
             postStore.add({
                 user: "My Account",
                 avatar: "",
                 location: currentEditLocation || "Unknown",
-                imageBlob: currentEditFiles[0],
+                
+                // 這裡改成存入所有選取的照片陣列
+                images: currentEditFiles, 
+                
                 likes: 0,
                 caption: currentEditTagged ? "With friends! ❤️" : "New post ✨",
                 timestamp: now.getTime(),
@@ -268,7 +271,8 @@ if(publishBtn) {
             editorPage.classList.remove('active');
             renderCalendar();
             if(isVIP) renderCommunity();
-            // 更新首頁封面
+            
+            // 更新首頁封面 (顯示第一張)
             if(card && currentEditFiles.length > 0) {
                 card.style.backgroundImage = `url('${URL.createObjectURL(currentEditFiles[0])}')`;
             }
@@ -276,7 +280,7 @@ if(publishBtn) {
     });
 }
 // ==========================================
-// 5. 社群頁面渲染 (Community Feed)
+// 5. 社群頁面渲染 (IG 風格多圖輪播)
 // ==========================================
 function renderCommunity() {
     const container = document.getElementById('feedContainer');
@@ -299,9 +303,25 @@ function renderCommunity() {
         posts.sort((a,b) => b.timestamp - a.timestamp);
 
         posts.forEach(post => {
-            const imgUrl = URL.createObjectURL(post.imageBlob);
+            // 相容性處理：如果舊資料只有 imageBlob，就轉成陣列
+            const images = post.images || [post.imageBlob];
+            
+            // 建立輪播圖片的 HTML
+            let slidesHtml = '';
+            images.forEach(blob => {
+                const url = URL.createObjectURL(blob);
+                slidesHtml += `<div class="feed-image" style="background-image: url('${url}')"></div>`;
+            });
+
+            // 建立卡片
             const card = document.createElement('div');
             card.className = 'feed-card';
+            
+            // 判斷是否顯示計數器 (只有一張圖時不用顯示)
+            const counterHtml = images.length > 1 
+                ? `<div class="feed-counter">1/${images.length}</div>` 
+                : '';
+
             card.innerHTML = `
                 <div class="feed-header">
                     <div class="feed-user-info">
@@ -313,7 +333,14 @@ function renderCommunity() {
                     </div>
                     <div style="font-weight:bold;">...</div>
                 </div>
-                <div class="feed-image" style="background-image: url('${imgUrl}')"></div>
+                
+                <div style="position: relative;">
+                    <div class="feed-carousel" onscroll="updateCounter(this)">
+                        ${slidesHtml}
+                    </div>
+                    ${counterHtml}
+                </div>
+
                 <div class="feed-actions">
                     <svg width="24" height="24" viewBox="0 0 24 24" stroke="black" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                     <svg width="24" height="24" viewBox="0 0 24 24" stroke="black" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
@@ -328,6 +355,21 @@ function renderCommunity() {
     };
 }
 
+// 輔助：更新輪播計數器 (例如滑到第 2 張顯示 2/3)
+window.updateCounter = function(carousel) {
+    const width = carousel.offsetWidth;
+    const scrollLeft = carousel.scrollLeft;
+    // 計算目前在第幾張 (四捨五入)
+    const index = Math.round(scrollLeft / width) + 1;
+    
+    // 找到同層級的計數器並更新文字
+    const counter = carousel.parentElement.querySelector('.feed-counter');
+    const total = carousel.children.length;
+    
+    if (counter) {
+        counter.textContent = `${index}/${total}`;
+    }
+};
 // ==========================================
 // 6. 其他既有功能 (日曆、滑動、ActionSheet) - 保持不變
 // ==========================================
