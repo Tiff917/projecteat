@@ -516,13 +516,20 @@ track.addEventListener('mousedown', startDrag);
 track.addEventListener('touchstart', startDrag);
 
 function startDrag(e) { 
-    isDragging = true; isHorizontalMove = false; 
+    // ⚠️ 關鍵修正：檢查點擊目標
+    // 如果手指點在「貼文輪播」或是「留言板」上，就不要啟動大頁面滑動
+    if (e.target.closest('.feed-carousel') || e.target.closest('.comment-sheet')) {
+        isDragging = false;
+        return; // 直接結束，把滑動權限還給瀏覽器 (這樣照片才能滑！)
+    }
+
+    isDragging = true; 
+    isHorizontalMove = false; 
     startX = e.pageX || e.touches[0].clientX; 
     startY = e.pageY || e.touches[0].clientY;
     startTranslate = -currentPage * 33.333; 
     track.style.transition = 'none';
 }
-
 window.addEventListener('mousemove', moveDrag);
 window.addEventListener('touchmove', moveDrag, {passive: false});
 
