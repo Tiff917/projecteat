@@ -186,3 +186,40 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .vip-badge {
     background: #FFD700; color: #000; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 5px; font-weight: bold;
 }
+/* style.css 新增 */
+
+/* 編輯器下方：開啟相簿的按鈕 */
+.gallery-add-btn {
+    width: 100%;
+    aspect-ratio: 1/1;
+    background-color: #EFEBE9; /* 淺褐色背景 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border: 2px dashed #8D6E63; /* 虛線框 */
+    box-sizing: border-box;
+    color: #8D6E63;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.gallery-add-btn svg {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 5px;
+    stroke: #8D6E63;
+}
+
+/* 讓預覽區預設顯示提示文字 */
+.preview-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #999;
+    font-size: 16px;
+    background-color: #f0f0f0;
+}
