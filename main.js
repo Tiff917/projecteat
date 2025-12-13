@@ -6,21 +6,22 @@ const topBar = document.getElementById('topBar');
 const bottomBar = document.getElementById('bottomBar');
 const card = document.querySelector('.card');
 
-// 🔥 VIP 模擬開關 (改為 false 測試非會員)
+// 🔥 VIP 開關 (true = 有社群功能, false = 只能存 Memory)
 const isVIP = true; 
 
-// 資料庫設定 (V9: 新增 posts 倉庫)
+// 資料庫設定
 let db;
-const DB_NAME = 'GourmetApp_v9'; 
+const DB_NAME = 'GourmetApp_Final_v11'; // 更新版本確保結構正確
 const STORE_PHOTOS = 'photos';
 const STORE_POSTS = 'posts';
 const DB_VERSION = 1;
 
-let currentPage = 1; 
+// 狀態變數
+let currentPage = 1; // 0: Memory, 1: Home, 2: Community
 let startX = 0, currentTranslate = -33.333, isDragging = false, startTranslate = 0;
 let displayDate = new Date();
 
-// 編輯器暫存資料
+// 編輯器暫存
 let currentEditFiles = [];
 let currentEditLocation = null;
 let currentEditTagged = false;
@@ -30,37 +31,41 @@ let currentEditTagged = false;
 // ==========================================
 function initDB() {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
+    
     request.onupgradeneeded = (e) => {
         db = e.target.result;
-        // 倉庫 1: 個人回憶
+        // 建立個人回憶倉庫
         if (db.objectStoreNames.contains(STORE_PHOTOS)) db.deleteObjectStore(STORE_PHOTOS);
         db.createObjectStore(STORE_PHOTOS, { keyPath: 'id', autoIncrement: true });
         
-        // 倉庫 2: 社群貼文 (VIP 專屬)
+        // 建立社群貼文倉庫
         if (db.objectStoreNames.contains(STORE_POSTS)) db.deleteObjectStore(STORE_POSTS);
         db.createObjectStore(STORE_POSTS, { keyPath: 'id', autoIncrement: true });
     };
+
     request.onsuccess = (e) => {
         db = e.target.result;
-        console.log("資料庫就緒");
+        console.log("資料庫連線成功");
         renderCalendar();
-        renderCommunity(); // 載入社群貼文
+        renderCommunity(); 
     };
+    
+    request.onerror = (e) => console.error("DB Error:", e);
 }
 initDB();
 
 // ==========================================
-// 3. 載入頁面與初始化
+// 3. 載入外部頁面 HTML
 // ==========================================
 async function loadExternalPages() {
     try {
-        // Memory
+        // 載入 Memory 頁面結構
         const memoryRes = await fetch('memory.html');
         if (memoryRes.ok) {
             document.getElementById('page-memory').innerHTML = await memoryRes.text();
             renderCalendar();
         }
-        // Community (直接把 index.html 裡的模板塞進去)
+        // 載入 Community 頁面結構 (使用 index.html 裡的模板)
         const feedTemplate = document.getElementById('communityTemplate');
         if (feedTemplate) {
             document.getElementById('page-community').innerHTML = feedTemplate.innerHTML;
@@ -83,48 +88,37 @@ const tagLocationBtn = document.getElementById('tagLocationBtn');
 const publishBtn = document.getElementById('publishBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 
-// A. 開啟編輯器 (直接進入，不跳彈窗)
+// A. 開啟編輯器
 if(editBtn) {
     editBtn.addEventListener('click', () => {
-        // 1. 重置變數
+        // 重置狀態
         currentEditFiles = [];
         currentEditLocation = null;
         currentEditTagged = false;
         
-        // 2. 重置 UI 狀態
+        // 重置 UI
         if(tagLocationBtn) tagLocationBtn.querySelector('#locationText').textContent = "";
         if(tagPeopleBtn) tagPeopleBtn.classList.remove('active');
         if(tagLocationBtn) tagLocationBtn.classList.remove('active');
         
-        // 3. 重置預覽區 (顯示空白或提示)
         editorPreview.innerHTML = `<div class="preview-placeholder">Select photos from gallery below</div>`;
         editorPreview.style.backgroundImage = 'none';
 
-        // 4. 重置下方圖庫 (顯示 "開啟相簿" 按鈕)
         renderInitialGrid();
-
-        // 5. 直接滑出頁面
         editorPage.classList.add('active');
     });
 }
 
-// 輔助：渲染初始狀態 (只有一顆加號按鈕)
+// 輔助：渲染初始狀態 (加號按鈕)
 function renderInitialGrid() {
     editorGrid.innerHTML = '';
-    
-    // 建立 "開啟相簿" 按鈕
     const addBtn = document.createElement('div');
     addBtn.className = 'gallery-add-btn';
-    addBtn.innerHTML = `
-        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        Open
-    `;
-    // 點擊這個按鈕，才觸發手機相簿
+    addBtn.innerHTML = `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Open`;
     addBtn.onclick = () => multiPhotoInput.click();
-    
     editorGrid.appendChild(addBtn);
 
-    // 補幾個灰色空格子裝飾 (讓它看起來像還沒載入)
+    // 裝飾用的空格子
     for(let i=0; i<7; i++) {
         const dummy = document.createElement('div');
         dummy.className = 'gallery-item';
@@ -134,7 +128,7 @@ function renderInitialGrid() {
     }
 }
 
-// B. 選圖後顯示 (當使用者真的選了照片)
+// B. 選圖後處理
 if(multiPhotoInput) {
     multiPhotoInput.addEventListener('change', (e) => {
         if(e.target.files.length > 0) {
@@ -144,38 +138,36 @@ if(multiPhotoInput) {
     });
 }
 
-// 渲染選中的照片
 function renderEditorPreview() {
     if(currentEditFiles.length === 0) return;
     
-    // 1. 設定大圖
+    // 顯示第一張大圖
     const firstUrl = URL.createObjectURL(currentEditFiles[0]);
-    editorPreview.innerHTML = ''; // 清掉提示文字
+    editorPreview.innerHTML = ''; 
     editorPreview.style.backgroundImage = `url('${firstUrl}')`;
     
-    // 2. 更新下方格子
+    // 更新下方格子
     editorGrid.innerHTML = '';
     
-    // 第一格還是保留 "加號" (如果要讓使用者加選，或是重新選)
+    // 保留加號按鈕
     const addBtn = document.createElement('div');
     addBtn.className = 'gallery-add-btn';
     addBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
     addBtn.onclick = () => multiPhotoInput.click();
     editorGrid.appendChild(addBtn);
 
-    // 列出所有選中的照片
+    // 顯示選中的照片
     currentEditFiles.forEach(file => {
         const div = document.createElement('div');
         div.className = 'gallery-item';
         const url = URL.createObjectURL(file);
         div.style.backgroundImage = `url('${url}')`;
-        // 點擊切換大圖
         div.onclick = () => editorPreview.style.backgroundImage = `url('${url}')`;
         editorGrid.appendChild(div);
     });
 }
 
-// C. 標註朋友 (VIP 檢查)
+// C. 標註朋友
 if(tagPeopleBtn) {
     tagPeopleBtn.addEventListener('click', () => {
         if(isVIP) {
@@ -188,34 +180,21 @@ if(tagPeopleBtn) {
     });
 }
 
-// main.js (修改定位邏輯)
-
-// D. 標註地點 (強制顯示 Kaohsiung)
+// D. 標註地點 (強制顯示高雄)
 if(tagLocationBtn) {
     tagLocationBtn.addEventListener('click', () => {
-        // 1. 變更按鈕狀態為「啟用」
         tagLocationBtn.classList.add('active');
         const txt = document.getElementById('locationText');
-        
-        // 2. 顯示載入中...
         if(txt) txt.textContent = "Locating...";
         
-        // 3. 模擬定位過程 (0.5秒後顯示高雄)
         setTimeout(() => {
-            // 強制設定地點名稱
             const locationName = "Kaohsiung"; 
-            
-            // 寫入變數 (讓之後發文可以存到資料庫)
             currentEditLocation = locationName;
-            
-            // 更新畫面上看到的文字
             if(txt) txt.textContent = locationName;
-            
-            // 也可以選擇不要跳 alert，直接顯示就好，這樣比較順
-            // alert(`定位成功：${locationName}`); 
         }, 500);
     });
 }
+
 // E. 關閉編輯器
 if(cancelEditBtn) {
     cancelEditBtn.addEventListener('click', () => {
@@ -223,7 +202,7 @@ if(cancelEditBtn) {
     });
 }
 
-// F. 發佈貼文 (支援多圖版)
+// F. 發佈貼文 (核心儲存邏輯)
 if(publishBtn) {
     publishBtn.addEventListener('click', () => {
         if(currentEditFiles.length === 0) {
@@ -239,7 +218,7 @@ if(publishBtn) {
         const memoryStore = tx.objectStore(STORE_PHOTOS);
         const postStore = tx.objectStore(STORE_POSTS);
 
-        // 1. 存入 Memory (每一張都拆開存，因為日曆是看單張的)
+        // 1. 存入 Memory (單張存，供日曆使用)
         currentEditFiles.forEach((file, index) => {
             memoryStore.add({
                 date: todayStr,
@@ -249,21 +228,19 @@ if(publishBtn) {
             });
         });
 
-        // 2. 存入社群 (VIP) - ⚠️ 關鍵修改：存入整個陣列
+        // 2. 存入社群 (存陣列，供輪播使用)
         if(isVIP) {
-            postStore.add({
+            const newPost = {
                 user: "My Account",
                 avatar: "",
                 location: currentEditLocation || "Unknown",
-                
-                // 這裡改成存入所有選取的照片陣列
-                images: currentEditFiles, 
-                
+                images: currentEditFiles, // ⚠️ 存入陣列
                 likes: 0,
                 caption: currentEditTagged ? "With friends! ❤️" : "New post ✨",
                 timestamp: now.getTime(),
                 isVIP: true
-            });
+            };
+            postStore.add(newPost);
         }
 
         tx.oncomplete = () => {
@@ -271,16 +248,16 @@ if(publishBtn) {
             editorPage.classList.remove('active');
             renderCalendar();
             if(isVIP) renderCommunity();
-            
-            // 更新首頁封面 (顯示第一張)
+            // 更新首頁封面
             if(card && currentEditFiles.length > 0) {
                 card.style.backgroundImage = `url('${URL.createObjectURL(currentEditFiles[0])}')`;
             }
         };
     });
 }
+
 // ==========================================
-// 5. 社群頁面渲染 (IG 風格多圖輪播)
+// 5. 社群頁面渲染 (Feed)
 // ==========================================
 function renderCommunity() {
     const container = document.getElementById('feedContainer');
@@ -292,36 +269,32 @@ function renderCommunity() {
 
     req.onsuccess = (e) => {
         const posts = e.target.result;
-        container.innerHTML = ''; // 清空
+        container.innerHTML = '';
 
         if(posts.length === 0) {
             container.innerHTML = '<div class="loading-text" style="text-align:center; margin-top:50px;">No posts yet.<br>Become a VIP to share!</div>';
             return;
         }
 
-        // 倒序排列 (最新的在上面)
+        // 倒序排列 (最新的在最上面)
         posts.sort((a,b) => b.timestamp - a.timestamp);
 
         posts.forEach(post => {
-            // 相容性處理：如果舊資料只有 imageBlob，就轉成陣列
+            // 處理圖片陣列
             const images = post.images || [post.imageBlob];
-            
-            // 建立輪播圖片的 HTML
             let slidesHtml = '';
             images.forEach(blob => {
-                const url = URL.createObjectURL(blob);
-                slidesHtml += `<div class="feed-image" style="background-image: url('${url}')"></div>`;
+                if(blob) {
+                    const url = URL.createObjectURL(blob);
+                    slidesHtml += `<div class="feed-image" style="background-image: url('${url}')"></div>`;
+                }
             });
 
-            // 建立卡片
+            // 右上角頁數計數器
+            const counterHtml = images.length > 1 ? `<div class="feed-counter">1/${images.length}</div>` : '';
+
             const card = document.createElement('div');
             card.className = 'feed-card';
-            
-            // 判斷是否顯示計數器 (只有一張圖時不用顯示)
-            const counterHtml = images.length > 1 
-                ? `<div class="feed-counter">1/${images.length}</div>` 
-                : '';
-
             card.innerHTML = `
                 <div class="feed-header">
                     <div class="feed-user-info">
@@ -335,48 +308,101 @@ function renderCommunity() {
                 </div>
                 
                 <div style="position: relative;">
-                    <div class="feed-carousel" onscroll="updateCounter(this)">
-                        ${slidesHtml}
-                    </div>
+                    <div class="feed-carousel" onscroll="updateCounter(this)">${slidesHtml}</div>
                     ${counterHtml}
                 </div>
 
                 <div class="feed-actions">
-                    <svg width="24" height="24" viewBox="0 0 24 24" stroke="black" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                    <svg width="24" height="24" viewBox="0 0 24 24" stroke="black" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                    <svg class="like-btn" width="28" height="28" viewBox="0 0 24 24" stroke="black" stroke-width="2" style="cursor:pointer; margin-right:10px;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <svg class="comment-btn" width="28" height="28" viewBox="0 0 24 24" stroke="black" stroke-width="2" style="cursor:pointer;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                 </div>
-                <div class="feed-likes">Liked by others</div>
-                <div class="feed-caption">
-                    <span style="font-weight:bold;">${post.user}</span> ${post.caption}
-                </div>
+                <div class="feed-likes" style="margin-bottom:10px;">${post.likes || 0} likes</div>
+                <div style="padding:0 15px 15px 15px; color:#999; font-size:13px; cursor:pointer;" class="comment-btn">View all comments...</div>
             `;
+
+            // 綁定愛心變色
+            card.querySelector('.like-btn').onclick = function() { this.classList.toggle('liked'); };
+            
+            // 綁定留言板
+            const commentBtns = card.querySelectorAll('.comment-btn');
+            commentBtns.forEach(btn => btn.onclick = () => openCommentSheet(post));
+
             container.appendChild(card);
         });
     };
 }
 
-// 輔助：更新輪播計數器 (例如滑到第 2 張顯示 2/3)
+// 更新輪播計數器 (Window 全域函式供 HTML onscroll 呼叫)
 window.updateCounter = function(carousel) {
     const width = carousel.offsetWidth;
-    const scrollLeft = carousel.scrollLeft;
-    // 計算目前在第幾張 (四捨五入)
-    const index = Math.round(scrollLeft / width) + 1;
-    
-    // 找到同層級的計數器並更新文字
+    const idx = Math.round(carousel.scrollLeft / width) + 1;
     const counter = carousel.parentElement.querySelector('.feed-counter');
-    const total = carousel.children.length;
-    
-    if (counter) {
-        counter.textContent = `${index}/${total}`;
-    }
+    if (counter) counter.textContent = `${idx}/${carousel.children.length}`;
 };
+
 // ==========================================
-// 6. 其他既有功能 (日曆、滑動、ActionSheet) - 保持不變
+// 6. 留言板邏輯 (Comment Sheet)
 // ==========================================
-// 日曆繪製 (Story Mode 整合版)
+function openCommentSheet(post) {
+    let sheet = document.getElementById('commentSheet');
+    // 如果是第一次開啟，建立 HTML 結構
+    if(!sheet) {
+        sheet = document.createElement('div'); sheet.id = 'commentSheet'; sheet.className = 'comment-sheet';
+        const bd = document.createElement('div'); bd.id = 'commentBackdrop';
+        bd.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:500;opacity:0;pointer-events:none;transition:opacity 0.3s;';
+        document.body.appendChild(bd);
+        
+        sheet.innerHTML = `
+            <div class="comment-header">Comments <div class="close-comment-btn">&times;</div></div>
+            <div class="comment-list" id="commentList"></div>
+            <div class="comment-input-area">
+                <div class="feed-avatar" style="width:32px;height:32px;margin-right:10px;"></div>
+                <input type="text" class="comment-input" placeholder="Add a comment..." id="newCommentInput">
+                <div class="comment-send-btn" id="sendCommentBtn">Post</div>
+            </div>
+        `;
+        document.body.appendChild(sheet);
+        
+        const close = () => { sheet.classList.remove('active'); bd.style.opacity='0'; bd.style.pointerEvents='none'; };
+        sheet.querySelector('.close-comment-btn').onclick = close; bd.onclick = close;
+    }
+
+    const list = document.getElementById('commentList'); list.innerHTML = '';
+    
+    // 顯示作者文案作為第一則留言
+    if(post.caption) {
+        const item = document.createElement('div'); item.className='comment-item';
+        item.innerHTML = `<div class="comment-avatar"></div><div class="comment-content"><span class="comment-user">${post.user}</span> ${post.caption}<div class="comment-time">1h</div></div>`;
+        list.appendChild(item);
+    }
+
+    // 發送留言模擬
+    const inp = document.getElementById('newCommentInput'); 
+    const send = document.getElementById('sendCommentBtn');
+    const newSend = send.cloneNode(true); send.parentNode.replaceChild(newSend, send);
+    
+    newSend.onclick = () => {
+        if(inp.value.trim() !== '') {
+            const item = document.createElement('div'); item.className='comment-item';
+            item.innerHTML = `<div class="comment-avatar"></div><div class="comment-content"><span class="comment-user">Me</span> ${inp.value}<div class="comment-time">Just now</div></div>`;
+            list.appendChild(item); 
+            inp.value=''; 
+            list.scrollTop=list.scrollHeight;
+        }
+    };
+
+    // 顯示
+    const bd = document.getElementById('commentBackdrop');
+    setTimeout(() => { bd.style.opacity='1'; bd.style.pointerEvents='auto'; sheet.classList.add('active'); }, 10);
+}
+
+// ==========================================
+// 7. 日曆與 Story (Story Mode)
+// ==========================================
 async function renderCalendar() {
     const container = document.getElementById('calendarDays');
     if (!container) return;
+    
     const tx = db.transaction([STORE_PHOTOS], 'readonly');
     const req = tx.objectStore(STORE_PHOTOS).getAll();
     req.onsuccess = (e) => {
@@ -385,13 +411,16 @@ async function renderCalendar() {
         allPhotos.forEach(p => { if(!grouped[p.date]) grouped[p.date]=[]; grouped[p.date].push(p); });
 
         container.innerHTML = '';
+        // 避免重複監聽：使用 cloneNode
         const newContainer = container.cloneNode(true);
         container.parentNode.replaceChild(newContainer, container);
         const activeContainer = document.getElementById('calendarDays');
 
+        // 日期計算
         const year = displayDate.getFullYear(), month = displayDate.getMonth();
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         
+        // 建立或更新標題列
         if (!document.getElementById('calControls')) {
             const header = document.getElementById('calendarMonth').parentNode;
             const controls = document.createElement('div');
@@ -421,6 +450,8 @@ async function renderCalendar() {
             }
             activeContainer.appendChild(cell);
         }
+        
+        // 點擊事件 (Story)
         activeContainer.addEventListener('click', (e) => {
             const cell = e.target.closest('.day-cell');
             if(cell && cell.classList.contains('has-photo')) openStoryMode(cell.dataset.date, grouped[cell.dataset.date]);
@@ -429,15 +460,16 @@ async function renderCalendar() {
 }
 function changeMonth(offset) { displayDate.setMonth(displayDate.getMonth() + offset); renderCalendar(); }
 
-// Story Mode
+// Story Mode (黑色播放器 + 下滑關閉 + 底部進度條)
 function openStoryMode(dateStr, photos) {
     let page = document.getElementById('storyPage');
     if(!page) {
         page = document.createElement('div'); page.id = 'storyPage';
         Object.assign(page.style, { position:'fixed', top:'0', left:'0', width:'100%', height:'100%', backgroundColor:'#000', zIndex:'9999', transform:'translateY(100%)', transition:'transform 0.3s cubic-bezier(0.4,0,0.2,1)', display:'flex', flexDirection:'column' });
-        page.innerHTML = `<div id="storyProgressBar" class="story-progress-bar"></div><div id="storyContent" style="width:100%; height:100%; position:relative;"></div>`;
+        page.innerHTML = `<div id="storyContent" style="width:100%; height:100%; position:relative;"></div><div id="storyProgressBar" class="story-progress-bar"></div>`;
         document.body.appendChild(page);
         
+        // 下滑關閉偵測
         let startY = 0;
         page.addEventListener('touchstart', (e)=>startY=e.touches[0].clientY, {passive:true});
         page.addEventListener('touchend', (e)=>{ if(e.changedTouches[0].clientY - startY > 80) page.style.transform='translateY(100%)'; });
@@ -470,35 +502,43 @@ function openStoryMode(dateStr, photos) {
     setTimeout(() => { page.style.transform='translateY(0)'; show(); }, 10);
 }
 
-// 互動與滑動
+// ==========================================
+// 8. 互動與滑動 (ActionSheet & Carousel)
+// ==========================================
 function closeSheet() {
     if(actionSheet && backdrop) {
-        actionSheet.style.transition = 'transform 0.3s ease-out';
         actionSheet.style.transform = 'translateY(100%)';
         backdrop.classList.remove('active');
     }
 }
+const backdrop = document.getElementById('backdrop');
+const actionSheet = document.getElementById('actionSheet');
+
 if(shutterBtn) shutterBtn.addEventListener('click', () => {
-    actionSheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
     actionSheet.style.transform = 'translateY(0)';
     backdrop.classList.add('active');
 });
 if(backdrop) backdrop.addEventListener('click', closeSheet);
 
-// 拍照與相簿 (單純存 Memory)
-if(takePhotoBtn && cameraInput) takePhotoBtn.addEventListener('click', () => { closeSheet(); setTimeout(() => cameraInput.click(), 100); });
-if(cameraInput) cameraInput.addEventListener('change', (e) => simpleSave(e.target.files));
-if(chooseAlbumBtn && albumInput) chooseAlbumBtn.addEventListener('click', () => { closeSheet(); setTimeout(() => albumInput.click(), 100); });
-if(albumInput) albumInput.addEventListener('change', (e) => simpleSave(e.target.files));
+// 綁定快速拍照功能
+const camInput = document.getElementById('cameraInput');
+const albInput = document.getElementById('albumInput');
+if(document.getElementById('takePhotoBtn')) document.getElementById('takePhotoBtn').onclick = () => { closeSheet(); setTimeout(() => camInput.click(), 100); };
+if(document.getElementById('chooseAlbumBtn')) document.getElementById('chooseAlbumBtn').onclick = () => { closeSheet(); setTimeout(() => albInput.click(), 100); };
+
+// 快速存檔函式 (不經編輯器)
+if(camInput) camInput.onchange = (e) => simpleSave(e.target.files);
+if(albInput) albInput.onchange = (e) => simpleSave(e.target.files);
 
 function simpleSave(files) {
     if(!files.length) return;
     const now = new Date();
+    const today = now.toISOString().split('T')[0];
     const tx = db.transaction([STORE_PHOTOS], 'readwrite');
     Array.from(files).forEach((f, i) => {
         tx.objectStore(STORE_PHOTOS).add({
-            date: now.toISOString().split('T')[0],
-            time: now.toLocaleTimeString(),
+            date: today,
+            time: new Date().toLocaleTimeString(),
             imageBlob: f,
             timestamp: now.getTime() + i
         });
@@ -510,54 +550,41 @@ function simpleSave(files) {
     };
 }
 
-// 滑動
-// ==========================================
-// 6. 滑動邏輯 (改良版：防誤觸、防亂滑)
-// ==========================================
-let startY = 0; // 新增 Y 軸紀錄
-let isHorizontalMove = false; // 判斷是否為橫向滑動
+// 滑動邏輯 (防誤觸版)
+let startY = 0; 
+let isHorizontalMove = false;
 
 track.addEventListener('mousedown', startDrag);
 track.addEventListener('touchstart', startDrag);
 
 function startDrag(e) { 
     isDragging = true; 
-    isHorizontalMove = false; // 每次開始時重置判斷
-    
-    // 紀錄 X 和 Y 座標
+    isHorizontalMove = false; 
     startX = e.pageX || e.touches[0].clientX; 
     startY = e.pageY || e.touches[0].clientY;
-    
     startTranslate = -currentPage * 33.333; 
     track.style.transition = 'none';
 }
 
 window.addEventListener('mousemove', moveDrag);
-window.addEventListener('touchmove', moveDrag, {passive: false}); // passive: false 才能擋住預設捲動
+window.addEventListener('touchmove', moveDrag, {passive: false});
 
 function moveDrag(e) {
     if(!isDragging) return;
-    
     const x = e.pageX || e.touches[0].clientX;
     const y = e.pageY || e.touches[0].clientY;
-    
     const deltaX = x - startX;
     const deltaY = y - startY;
 
-    // ⚠️ 關鍵邏輯：判斷使用者的意圖
-    // 如果還沒決定方向，且手指已經移動了一點距離
     if (!isHorizontalMove) {
-        // 如果「上下移動」大於「左右移動」，代表使用者想捲動貼文
         if (Math.abs(deltaY) > Math.abs(deltaX)) {
-            isDragging = false; // 放棄輪播拖曳
-            return; // 讓瀏覽器執行原本的上下捲動
+            isDragging = false; 
+            return; 
         } else {
-            // 否則，認定為左右滑動 (切換頁面)
             isHorizontalMove = true;
         }
     }
 
-    // 如果確定是左右滑，才執行 transform，並阻止瀏覽器捲動
     if (isHorizontalMove) {
         if(e.cancelable) e.preventDefault(); 
         track.style.transform = `translateX(${startTranslate + (deltaX/window.innerWidth)*33.333}%)`;
@@ -570,17 +597,12 @@ window.addEventListener('touchend', endDrag);
 function endDrag(e) { 
     if(!isDragging) return; 
     isDragging = false; 
-    
-    // 只有在確認是橫向移動時，才判斷是否翻頁
     if (isHorizontalMove) {
         const endX = e.pageX || e.changedTouches[0].clientX; 
-        // 滑動距離超過 50px 才翻頁
         if (endX - startX > 50 && currentPage > 0) currentPage--; 
         else if (startX - endX > 50 && currentPage < 2) currentPage++; 
-        
         updateCarousel(); 
     } else {
-        // 如果只是輕輕點一下，或是滑動判定失敗，也要歸位
         updateCarousel();
     }
 }
@@ -588,20 +610,17 @@ function endDrag(e) {
 function updateCarousel() {
     track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
     track.style.transform = `translateX(-${currentPage * 33.333}%)`;
-    
-    // 頁面隱藏邏輯 (防遮擋)
     const pages = document.querySelectorAll('.page-container');
     pages.forEach((p, i) => {
-        if(i === currentPage) {
-            p.style.visibility = 'visible';
-            p.style.pointerEvents = 'auto';
-        } else {
-            p.style.visibility = 'hidden'; // 關鍵：隱藏隔壁頁面
-            p.style.pointerEvents = 'none';
-        }
+        p.style.visibility = (i===currentPage)?'visible':'hidden';
+        p.style.pointerEvents = (i===currentPage)?'auto':'none';
     });
-
     const isHome = currentPage === 1;
     if(topBar) topBar.style.opacity = isHome ? 1 : 0;
     if(bottomBar) bottomBar.style.opacity = isHome ? 1 : 0;
 }
+
+// 側邊欄與其他
+if(openProfileBtn) openProfileBtn.addEventListener('click', () => profilePage.classList.add('active'));
+if(closeProfileBtn) closeProfileBtn.addEventListener('click', () => profilePage.classList.remove('active'));
+if(logoutBtn) logoutBtn.addEventListener('click', () => alert('Log out'));
