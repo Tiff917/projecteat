@@ -117,3 +117,28 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
     padding: 5px 10px;
     font-weight: bold;
 }
+/* style.css 最後面新增 */
+
+/* Story 頂部進度條容器 */
+.story-progress-bar {
+    position: absolute;
+    top: 10px;
+    left: 5px;
+    right: 5px;
+    display: flex;
+    gap: 3px; /* 小長條之間的間距 */
+    z-index: 30;
+}
+
+/* 進度條的小長條 (預設灰色) */
+.progress-segment {
+    flex: 1; /* 平均分配寬度 */
+    height: 3px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+/* 目前播放中的小長條 (白色) */
+.progress-segment.active {
+    background-color: rgba(255, 255, 255, 1);
+}
