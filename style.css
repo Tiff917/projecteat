@@ -548,3 +548,46 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .carousel-track {
     pointer-events: auto;
 }
+/* style.css 新增 */
+
+/* --- 9. 限時動態播放器 (Story Mode) --- */
+.story-container {
+    width: 100%;
+    height: 100%;
+    background-color: #000; /* 黑底 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.story-img-box {
+    width: 100%;
+    height: 80%; /* 留空間給標題和時間 */
+    background-size: contain; /* 完整顯示，不裁切 */
+    background-repeat: no-repeat;
+    background-position: center;
+    transition: background-image 0.2s ease;
+}
+
+.story-info {
+    color: white;
+    margin-top: 15px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+
+/* 左右點擊感應區 (隱形按鈕) */
+.story-nav-left, .story-nav-right {
+    position: absolute;
+    top: 0; 
+    bottom: 0;
+    width: 50%; /* 各佔一半 */
+    z-index: 10;
+    /* background: rgba(255,0,0,0.1); 測試時可打開看範圍 */
+}
+.story-nav-left { left: 0; }
+.story-nav-right { right: 0; }
