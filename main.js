@@ -119,14 +119,19 @@ async function loadExternalPages() {
 loadExternalPages();
 
 // ==========================================
-// 4. 繪製日曆 (解決重複問題)
+// 4. 繪製日曆 (修正版：改用事件委派，保證點得到)
 // ==========================================
 async function renderCalendar() {
     const calendarContainer = document.getElementById('calendarDays');
     if (!calendarContainer) return; 
 
-    // ⚠️ 終極防禦：繪製前徹底清空容器，防止日曆疊加
+    // 1. 清空容器
     calendarContainer.innerHTML = ''; 
+    // ⚠️ 移除舊的監聽器 (複製節點法)，防止重複綁定
+    const newContainer = calendarContainer.cloneNode(true);
+    calendarContainer.parentNode.replaceChild(newContainer, calendarContainer);
+    // 更新變數指向新的容器
+    const activeContainer = document.getElementById('calendarDays');
 
     const date = new Date();
     const year = date.getFullYear();
@@ -141,12 +146,12 @@ async function renderCalendar() {
 
     const photosGroup = await getAllPhotosGrouped();
 
-    // 空白格
+    // 2. 產生空白格
     for (let i = 0; i < firstDay; i++) {
-        calendarContainer.appendChild(document.createElement('div'));
+        activeContainer.appendChild(document.createElement('div'));
     }
 
-    // 日期格
+    // 3. 產生日期格
     for (let day = 1; day <= daysInMonth; day++) {
         const dayCell = document.createElement('div');
         dayCell.classList.add('day-cell');
@@ -160,46 +165,39 @@ async function renderCalendar() {
         if (photosGroup[dateString] && photosGroup[dateString].length > 0) {
             dayCell.classList.add('has-photo');
             
-            // 拿「最後一張」當封面
+            // 封面圖
             const lastPhoto = photosGroup[dateString][photosGroup[dateString].length - 1];
             const imgUrl = URL.createObjectURL(lastPhoto.imageBlob);
             
             dayCell.style.backgroundImage = `url('${imgUrl}')`;
             dayCell.textContent = ''; 
-
-            // 點擊事件
-            dayCell.onclick = () => {
-                console.log("點擊了日期:", dateString); // 看 Console 有沒有反應
-                alert("正在開啟照片..."); // 如果你不確定有沒有點到，可以把這行註解拿掉測試
-                openTimeline(dateString, photosGroup[dateString]);
-            };
+            
+            // ⚠️ 關鍵：不直接綁 onclick，而是把資料藏在標籤裡
+            dayCell.dataset.date = dateString; 
+            dayCell.dataset.hasPhoto = "true";
         }
-        calendarContainer.appendChild(dayCell);
+        activeContainer.appendChild(dayCell);
     }
-}
 
-// 輔助：抓取所有照片並分組
-function getAllPhotosGrouped() {
-    return new Promise((resolve) => {
-        if (!db) { resolve({}); return; }
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.getAll();
+    // 4. ⚠️ 關鍵修正：統一在容器上監聽點擊 (事件委派)
+    // 這樣就算格子是動態生成的，也一定抓得到點擊
+    activeContainer.addEventListener('click', (e) => {
+        // 找出被點擊的目標是否為 day-cell (或其子元素)
+        const cell = e.target.closest('.day-cell');
         
-        request.onsuccess = (e) => {
-            const results = e.target.result;
-            const grouped = {};
-            if(results) {
-                results.forEach(item => {
-                    if (!grouped[item.date]) grouped[item.date] = [];
-                    grouped[item.date].push(item);
-                });
+        if (cell && cell.dataset.hasPhoto === "true") {
+            const targetDate = cell.dataset.date;
+            console.log("成功捕捉點擊:", targetDate); // 這行會顯示在 Console
+            
+            // 呼叫開啟時間軸
+            if (photosGroup[targetDate]) {
+                openTimeline(targetDate, photosGroup[targetDate]);
+            } else {
+                alert("讀取照片資料失敗");
             }
-            resolve(grouped);
-        };
+        }
     });
 }
-
 // ==========================================
 // 5. 批次上傳邏輯 (解決多圖只存一張的問題)
 // ==========================================
