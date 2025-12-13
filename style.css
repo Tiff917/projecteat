@@ -609,3 +609,48 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .day-cell.has-photo * {
     pointer-events: none;
 }
+
+/* --- 修正版：確保頁面不會互相遮擋 --- */
+.page-container {
+    width: 33.333%; 
+    height: 100%;
+    flex-shrink: 0;
+    position: relative; /* 關鍵：建立圖層基準 */
+    z-index: 1; /* 預設層級 */
+    
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    
+    /* ⚠️ 絕對關鍵：這行會切掉所有溢出的陰影或物件，防止擋到隔壁 */
+    overflow: hidden; 
+}
+
+/* === 強制日曆點擊修正 (貼在 style.css 最後面) === */
+
+/* 1. 讓 Memory 頁面層級最高 (當滑過去時) */
+#page-memory {
+    z-index: 50 !important; 
+}
+
+/* 2. 讓日曆容器浮在最上面 */
+.calendar-container {
+    position: relative;
+    z-index: 100 !important; /* 比任何東西都高 */
+    pointer-events: auto !important; /* 強制開啟點擊 */
+    /* 為了測試，您可以暫時加個紅框，確認紅框內是否有點擊反應 */
+    /* border: 2px solid red; */ 
+}
+
+/* 3. 確保每個格子都能點 */
+.day-cell {
+    position: relative;
+    z-index: 101 !important; /* 比容器更高 */
+    cursor: pointer;
+}
+
+/* 4. 如果有照片，確保照片不擋路 */
+.day-cell.has-photo {
+    pointer-events: auto !important;
+}
