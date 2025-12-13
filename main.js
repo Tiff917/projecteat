@@ -469,30 +469,97 @@ function simpleSave(files) {
 }
 
 // 滑動
+// ==========================================
+// 6. 滑動邏輯 (改良版：防誤觸、防亂滑)
+// ==========================================
+let startY = 0; // 新增 Y 軸紀錄
+let isHorizontalMove = false; // 判斷是否為橫向滑動
+
 track.addEventListener('mousedown', startDrag);
 track.addEventListener('touchstart', startDrag);
-function startDrag(e) { isDragging=true; startX=e.pageX||e.touches[0].clientX; startTranslate=-currentPage*33.333; track.style.transition='none'; }
+
+function startDrag(e) { 
+    isDragging = true; 
+    isHorizontalMove = false; // 每次開始時重置判斷
+    
+    // 紀錄 X 和 Y 座標
+    startX = e.pageX || e.touches[0].clientX; 
+    startY = e.pageY || e.touches[0].clientY;
+    
+    startTranslate = -currentPage * 33.333; 
+    track.style.transition = 'none';
+}
+
 window.addEventListener('mousemove', moveDrag);
-window.addEventListener('touchmove', moveDrag, {passive:false});
-function moveDrag(e) { if(!isDragging)return; const delta=(e.pageX||e.touches[0].clientX)-startX; track.style.transform=`translateX(${startTranslate+(delta/window.innerWidth)*33.333}%)`; }
+window.addEventListener('touchmove', moveDrag, {passive: false}); // passive: false 才能擋住預設捲動
+
+function moveDrag(e) {
+    if(!isDragging) return;
+    
+    const x = e.pageX || e.touches[0].clientX;
+    const y = e.pageY || e.touches[0].clientY;
+    
+    const deltaX = x - startX;
+    const deltaY = y - startY;
+
+    // ⚠️ 關鍵邏輯：判斷使用者的意圖
+    // 如果還沒決定方向，且手指已經移動了一點距離
+    if (!isHorizontalMove) {
+        // 如果「上下移動」大於「左右移動」，代表使用者想捲動貼文
+        if (Math.abs(deltaY) > Math.abs(deltaX)) {
+            isDragging = false; // 放棄輪播拖曳
+            return; // 讓瀏覽器執行原本的上下捲動
+        } else {
+            // 否則，認定為左右滑動 (切換頁面)
+            isHorizontalMove = true;
+        }
+    }
+
+    // 如果確定是左右滑，才執行 transform，並阻止瀏覽器捲動
+    if (isHorizontalMove) {
+        if(e.cancelable) e.preventDefault(); 
+        track.style.transform = `translateX(${startTranslate + (deltaX/window.innerWidth)*33.333}%)`;
+    }
+}
+
 window.addEventListener('mouseup', endDrag);
 window.addEventListener('touchend', endDrag);
+
 function endDrag(e) { 
-    if(!isDragging)return; isDragging=false; 
-    const endX=e.pageX||e.changedTouches[0].clientX; 
-    if(endX-startX>50 && currentPage>0) currentPage--; 
-    else if(startX-endX>50 && currentPage<2) currentPage++; 
-    updateCarousel(); 
+    if(!isDragging) return; 
+    isDragging = false; 
+    
+    // 只有在確認是橫向移動時，才判斷是否翻頁
+    if (isHorizontalMove) {
+        const endX = e.pageX || e.changedTouches[0].clientX; 
+        // 滑動距離超過 50px 才翻頁
+        if (endX - startX > 50 && currentPage > 0) currentPage--; 
+        else if (startX - endX > 50 && currentPage < 2) currentPage++; 
+        
+        updateCarousel(); 
+    } else {
+        // 如果只是輕輕點一下，或是滑動判定失敗，也要歸位
+        updateCarousel();
+    }
 }
+
 function updateCarousel() {
     track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
     track.style.transform = `translateX(-${currentPage * 33.333}%)`;
+    
+    // 頁面隱藏邏輯 (防遮擋)
     const pages = document.querySelectorAll('.page-container');
     pages.forEach((p, i) => {
-        p.style.visibility = (i===currentPage)?'visible':'hidden';
-        p.style.pointerEvents = (i===currentPage)?'auto':'none';
+        if(i === currentPage) {
+            p.style.visibility = 'visible';
+            p.style.pointerEvents = 'auto';
+        } else {
+            p.style.visibility = 'hidden'; // 關鍵：隱藏隔壁頁面
+            p.style.pointerEvents = 'none';
+        }
     });
-    const isHome = currentPage===1;
-    if(topBar) topBar.style.opacity = isHome?1:0;
-    if(bottomBar) bottomBar.style.opacity = isHome?1:0;
+
+    const isHome = currentPage === 1;
+    if(topBar) topBar.style.opacity = isHome ? 1 : 0;
+    if(bottomBar) bottomBar.style.opacity = isHome ? 1 : 0;
 }
