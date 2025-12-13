@@ -10,7 +10,7 @@ const isVIP = true;
 
 // 資料庫設定
 let db;
-const DB_NAME = 'GourmetApp_Final_v15'; 
+const DB_NAME = 'GourmetApp_Final_v16'; // 🚀 版本升級 v16
 const STORE_PHOTOS = 'photos';
 const STORE_POSTS = 'posts';
 const DB_VERSION = 1;
@@ -19,9 +19,11 @@ let currentPage = 1;
 let startX = 0, currentTranslate = -33.333, isDragging = false, startTranslate = 0;
 let displayDate = new Date();
 
-let currentEditFiles = [];
+// 🚀 核心變數：儲存最終要發佈的檔案陣列
+let finalFiles = []; 
 let currentEditLocation = null;
 let currentEditTagged = false;
+let isMultiSelectMode = false; // 多選模式開關
 
 // ==========================================
 // 2. 初始化資料庫
@@ -38,7 +40,6 @@ function initDB() {
     };
     request.onsuccess = (e) => {
         db = e.target.result;
-        console.log("資料庫連線成功 (v15)");
         renderCalendar();
         renderCommunity(); 
     };
@@ -65,7 +66,7 @@ async function loadExternalPages() {
 loadExternalPages();
 
 // ==========================================
-// 4. 編輯器邏輯 (修復版：多選開關)
+// 4. 編輯器邏輯 (IG 風格選圖核心)
 // ==========================================
 const editBtn = document.getElementById('editBtn');
 const editorPage = document.getElementById('editorPage');
@@ -74,27 +75,21 @@ const editorPreview = document.getElementById('editorPreview');
 const editorGrid = document.getElementById('editorGrid');
 const tagPeopleBtn = document.getElementById('tagPeopleBtn');
 const tagLocationBtn = document.getElementById('tagLocationBtn');
-const multiSelectBtn = document.getElementById('multiSelectBtn'); // 取得多選按鈕
+const multiSelectBtn = document.getElementById('multiSelectBtn'); // 多選按鈕
 const publishBtn = document.getElementById('publishBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 
-// 多選模式狀態
-let isMultiSelectMode = false;
-
-// A. 進入編輯頁面
+// A. 進入編輯器
 if(editBtn) {
     editBtn.addEventListener('click', () => {
-        // 重置所有狀態
-        currentEditFiles = [];
+        // 重置狀態
+        finalFiles = []; // 清空暫存
         currentEditLocation = null;
         currentEditTagged = false;
-        
-        // 重置多選按鈕 (預設關閉)
         isMultiSelectMode = false;
-        if(multiSelectBtn) multiSelectBtn.classList.remove('active');
-        if(multiPhotoInput) multiPhotoInput.removeAttribute('multiple'); // 移除多選屬性
-
-        // 重置其他 UI
+        
+        // 重置 UI
+        if(multiSelectBtn) multiSelectBtn.classList.remove('active'); // 預設關閉多選
         if(tagLocationBtn) tagLocationBtn.querySelector('#locationText').textContent = "";
         if(tagPeopleBtn) tagPeopleBtn.classList.remove('active');
         if(tagLocationBtn) tagLocationBtn.classList.remove('active');
@@ -102,52 +97,94 @@ if(editBtn) {
         editorPreview.innerHTML = `<div class="preview-placeholder">Select photos from gallery below</div>`;
         editorPreview.style.backgroundImage = 'none';
 
-        renderInitialGrid();
+        renderEditorGrid(); // 渲染格子
         editorPage.classList.add('active');
     });
 }
 
-// 🔥 B. 多選開關邏輯 (關鍵修復)
+// B. 多選開關切換
 if(multiSelectBtn) {
     multiSelectBtn.addEventListener('click', () => {
-        isMultiSelectMode = !isMultiSelectMode; // 切換開關
-        
-        if (isMultiSelectMode) {
-            // 開啟多選
-            multiSelectBtn.classList.add('active');
-            multiPhotoInput.setAttribute('multiple', ''); // 加上屬性
-            alert("已開啟多選模式：現在您可以選取多張照片了！");
+        isMultiSelectMode = !isMultiSelectMode;
+        if(isMultiSelectMode) {
+            multiSelectBtn.classList.add('active'); // 變深色
+            // 提示使用者
+            // alert("多選模式開啟：您可以點擊「+」繼續加入更多照片！");
         } else {
-            // 關閉多選
             multiSelectBtn.classList.remove('active');
-            multiPhotoInput.removeAttribute('multiple'); // 移除屬性
         }
     });
 }
 
-// C. 渲染下方格子 (包含 + 按鈕)
-function renderInitialGrid() {
+// C. 選圖監聽
+if(multiPhotoInput) {
+    multiPhotoInput.addEventListener('change', (e) => {
+        if(e.target.files.length > 0) {
+            const newFiles = Array.from(e.target.files);
+
+            if (isMultiSelectMode) {
+                // 🚀 累加模式：把新選的照片「加入」到陣列
+                finalFiles = [...finalFiles, ...newFiles];
+            } else {
+                // 🚀 單選模式：直接「取代」舊陣列
+                finalFiles = newFiles;
+            }
+            
+            renderEditorGrid(); // 重新渲染畫面
+        }
+        // 清空 input 讓同一張圖可以重複選 (如果需要)
+        e.target.value = '';
+    });
+}
+
+// D. 渲染編輯器畫面 (大圖 + 下方網格)
+function renderEditorGrid() {
     editorGrid.innerHTML = '';
     
-    // 建立 + 按鈕
+    // 1. 如果有照片，大圖顯示「最後一張選的」或「第一張」
+    if(finalFiles.length > 0) {
+        // 預設顯示最後加入的那張 (符合使用者直覺)
+        const lastFile = finalFiles[finalFiles.length - 1];
+        const url = URL.createObjectURL(lastFile);
+        editorPreview.innerHTML = '';
+        editorPreview.style.backgroundImage = `url('${url}')`;
+    } else {
+        editorPreview.style.backgroundImage = 'none';
+        editorPreview.innerHTML = `<div class="preview-placeholder">Select photos</div>`;
+    }
+
+    // 2. 建立「+」按鈕 (永遠在第一格)
     const addBtn = document.createElement('div');
     addBtn.className = 'gallery-add-btn';
-    
-    // 這裡改回使用單純的 div 點擊，因為我們要動態控制 input
+    // 這裡用 label 包裹 input 觸發，最穩定
     addBtn.innerHTML = `
-        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        Open
+        <label for="multiPhotoInput" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Add
+        </label>
     `;
-    
-    // 點擊 + 號時觸發 Input
-    addBtn.onclick = () => {
-        if(multiPhotoInput) multiPhotoInput.click();
-    };
-    
     editorGrid.appendChild(addBtn);
 
-    // 裝飾格子
-    for(let i=0; i<7; i++) {
+    // 3. 列出所有已選照片 (點擊切換大圖)
+    finalFiles.forEach((file, index) => {
+        const div = document.createElement('div');
+        div.className = 'gallery-item';
+        const url = URL.createObjectURL(file);
+        div.style.backgroundImage = `url('${url}')`;
+        
+        // 點擊小圖 -> 切換大圖預覽
+        div.onclick = () => {
+            editorPreview.style.backgroundImage = `url('${url}')`;
+        };
+        
+        // 可選功能：長按刪除 (這裡先做簡單版，如果需要再加)
+        
+        editorGrid.appendChild(div);
+    });
+
+    // 4. 補齊空白格 (美觀)
+    const emptyCount = 7 - finalFiles.length;
+    for(let i=0; i < (emptyCount > 0 ? emptyCount : 0); i++) {
         const dummy = document.createElement('div');
         dummy.className = 'gallery-item';
         dummy.style.backgroundColor = '#f5f5f5';
@@ -155,47 +192,7 @@ function renderInitialGrid() {
     }
 }
 
-// D. 選圖後處理
-if(multiPhotoInput) {
-    multiPhotoInput.addEventListener('change', (e) => {
-        if(e.target.files.length > 0) {
-            // 如果是多選模式，可能是累加；這裡我們先做「覆蓋」邏輯比較簡單
-            currentEditFiles = Array.from(e.target.files);
-            renderEditorPreview();
-        }
-    });
-}
-
-function renderEditorPreview() {
-    if(currentEditFiles.length === 0) return;
-    
-    // 顯示第一張大圖
-    const firstUrl = URL.createObjectURL(currentEditFiles[0]);
-    editorPreview.innerHTML = ''; 
-    editorPreview.style.backgroundImage = `url('${firstUrl}')`;
-    
-    // 更新下方格子
-    editorGrid.innerHTML = '';
-    
-    // 保持 + 按鈕在第一個
-    const addBtn = document.createElement('div');
-    addBtn.className = 'gallery-add-btn';
-    addBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
-    addBtn.onclick = () => multiPhotoInput.click();
-    editorGrid.appendChild(addBtn);
-
-    // 顯示選中的照片
-    currentEditFiles.forEach(file => {
-        const div = document.createElement('div');
-        div.className = 'gallery-item';
-        const url = URL.createObjectURL(file);
-        div.style.backgroundImage = `url('${url}')`;
-        div.onclick = () => editorPreview.style.backgroundImage = `url('${url}')`;
-        editorGrid.appendChild(div);
-    });
-}
-
-// 其他按鈕邏輯保持不變...
+// 其他編輯器按鈕
 if(tagPeopleBtn) {
     tagPeopleBtn.addEventListener('click', () => {
         if(isVIP) {
@@ -223,9 +220,11 @@ if(tagLocationBtn) {
 
 if(cancelEditBtn) cancelEditBtn.addEventListener('click', () => editorPage.classList.remove('active'));
 
+// F. 發佈貼文 (使用 finalFiles 陣列)
 if(publishBtn) {
     publishBtn.addEventListener('click', () => {
-        if(currentEditFiles.length === 0) {
+        // 檢查全域陣列
+        if(finalFiles.length === 0) {
             alert("請先選擇照片！");
             return;
         }
@@ -238,20 +237,20 @@ if(publishBtn) {
         const memoryStore = tx.objectStore(STORE_PHOTOS);
         const postStore = tx.objectStore(STORE_POSTS);
 
-        // Memory 存單張
-        currentEditFiles.forEach((file, index) => {
+        // 1. 存入 Memory
+        finalFiles.forEach((file, index) => {
             memoryStore.add({
                 date: todayStr, time: timeStr, imageBlob: file, timestamp: now.getTime() + index
             });
         });
 
-        // 社群存多張
+        // 2. 存入社群
         if(isVIP) {
             postStore.add({
                 user: "My Account",
                 avatar: "",
                 location: currentEditLocation || "Unknown",
-                images: currentEditFiles, 
+                images: finalFiles, // ⚠️ 存入累積的陣列
                 likes: 0,
                 caption: currentEditTagged ? "With friends! ❤️" : "New post ✨",
                 timestamp: now.getTime(),
@@ -264,15 +263,16 @@ if(publishBtn) {
             editorPage.classList.remove('active');
             renderCalendar();
             if(isVIP) renderCommunity();
-            if(card && currentEditFiles.length > 0) {
-                card.style.backgroundImage = `url('${URL.createObjectURL(currentEditFiles[0])}')`;
+            // 首頁顯示第一張
+            if(card && finalFiles.length > 0) {
+                card.style.backgroundImage = `url('${URL.createObjectURL(finalFiles[0])}')`;
             }
         };
     });
 }
 
 // ==========================================
-// 5. 社群頁面渲染 (正方形 100vw + 留言修復)
+// 5. 社群頁面渲染
 // ==========================================
 function renderCommunity() {
     const container = document.getElementById('feedContainer');
@@ -335,7 +335,6 @@ function renderCommunity() {
             `;
 
             card.querySelector('.like-btn').onclick = function() { this.classList.toggle('liked'); };
-            
             const commentBtns = card.querySelectorAll('.comment-btn');
             commentBtns.forEach(btn => btn.onclick = () => openCommentSheet(post));
 
@@ -344,7 +343,7 @@ function renderCommunity() {
     };
 }
 
-// ⚠️ 留言板邏輯 (修正版：綁定全域 onclick)
+// 留言板全域函式
 function openCommentSheet(post) {
     let sheet = document.getElementById('commentSheet');
     if(!sheet) {
@@ -352,47 +351,28 @@ function openCommentSheet(post) {
         const bd = document.createElement('div'); bd.id = 'commentBackdrop';
         bd.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:500;opacity:0;pointer-events:none;transition:opacity 0.3s;';
         document.body.appendChild(bd);
-        
-        // ⚠️ 注意這裡：onclick="window.handleSendComment()"
-        sheet.innerHTML = `
-            <div class="comment-header">Comments <div class="close-comment-btn">&times;</div></div>
-            <div class="comment-list" id="commentList"></div>
-            <div class="comment-input-area">
-                <div class="feed-avatar" style="width:32px;height:32px;margin-right:10px;"></div>
-                <input type="text" class="comment-input" placeholder="Add a comment..." id="newCommentInput">
-                <div class="comment-send-btn" onclick="window.handleSendComment()">Post</div>
-            </div>
-        `;
+        sheet.innerHTML = `<div class="comment-header">Comments <div class="close-comment-btn">&times;</div></div><div class="comment-list" id="commentList"></div><div class="comment-input-area"><div class="feed-avatar" style="width:32px;height:32px;margin-right:10px;"></div><input type="text" class="comment-input" placeholder="Add a comment..." id="newCommentInput"><div class="comment-send-btn" onclick="window.sendComment()">Post</div></div>`;
         document.body.appendChild(sheet);
-        
         const close = () => { sheet.classList.remove('active'); bd.style.opacity='0'; bd.style.pointerEvents='none'; };
         sheet.querySelector('.close-comment-btn').onclick = close; bd.onclick = close;
     }
-
     const list = document.getElementById('commentList'); list.innerHTML = '';
-    
-    // 作者留言
     if(post.caption) {
         const item = document.createElement('div'); item.className='comment-item';
         item.innerHTML = `<div class="comment-avatar"></div><div class="comment-content"><span class="comment-user">${post.user}</span> ${post.caption}<div class="comment-time">1h</div></div>`;
         list.appendChild(item);
     }
-
     const bd = document.getElementById('commentBackdrop');
     setTimeout(() => { bd.style.opacity='1'; bd.style.pointerEvents='auto'; sheet.classList.add('active'); }, 10);
 }
 
-// 🔥 全域發送函式
-window.handleSendComment = function() {
+window.sendComment = function() {
     const inp = document.getElementById('newCommentInput');
     const list = document.getElementById('commentList');
-    
     if(inp && inp.value.trim() !== '') {
         const item = document.createElement('div'); item.className='comment-item';
         item.innerHTML = `<div class="comment-avatar"></div><div class="comment-content"><span class="comment-user">Me</span> ${inp.value}<div class="comment-time">Just now</div></div>`;
-        list.appendChild(item);
-        inp.value = '';
-        list.scrollTop = list.scrollHeight;
+        list.appendChild(item); inp.value=''; list.scrollTop = list.scrollHeight;
     }
 };
 
@@ -402,7 +382,6 @@ window.updateCounter = function(carousel) {
     const counter = carousel.parentElement.querySelector('.feed-counter');
     if (counter) counter.textContent = `${idx}/${carousel.children.length}`;
 };
-
 // ==========================================
 // 6. 其他功能 (日曆、滑動、ActionSheet)
 // ==========================================
