@@ -1,652 +1,90 @@
 /* --- 1. 基礎設定 --- */
-* {
-    box-sizing: border-box;
-    margin: 0; padding: 0;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; }
+:root { --bg-color: #F2EBE0; --primary-brown: #8D6E63; --text-dark: #5D4037; --card-size: min(85vw, 400px); }
+body { background-color: var(--bg-color); width: 100vw; height: 100vh; overflow: hidden; position: fixed; }
 
-:root {
-    --bg-color: #F2EBE0;       
-    --primary-brown: #8D6E63;  
-    --text-dark: #5D4037;
-}
+/* --- 2. 滑動軌道 --- */
+.carousel-track { display: flex; width: 300%; height: 100%; transform: translateX(-33.333%); will-change: transform; }
 
-body {
-    background-color: var(--bg-color);
-    width: 100vw; height: 100vh;
-    overflow: hidden; /* 禁止瀏覽器預設捲動 */
-    position: fixed; /* 鎖定畫面 */
+/* ⚠️ 關鍵修正：頁面容器設定 */
+.page-container {
+    width: 33.333%; height: 100%; flex-shrink: 0;
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center; 
+    
+    /* 👇 這裡控制卡片垂直置中 */
+    justify-content: center; 
+    
+    /* 👇 關鍵：上下留白，避開 Top/Bottom Bar，讓卡片完美居中 */
+    padding-top: 80px; 
+    padding-bottom: 100px;
+    
+    overflow: hidden; /* 防止溢出擋到隔壁 */
 }
+/* Memory 頁面需要靠上對齊日曆，不需要置中 */
+#page-memory { justify-content: flex-start; padding-top: 120px; z-index: 50; }
 
-/* --- 2. 滑動軌道 (核心) --- */
-.carousel-track {
-    display: flex;
-    width: 300%; /* 三個頁面寬 */
-    height: 100%;
-    transform: translateX(-33.333%); /* 初始位置在中間 */
-    will-change: transform; /* 效能優化 */
-}
-/* 用於外部載入內容的包覆層 */
-.page-content-wrapper {
-    width: 100%; height: 100%;
-    display: flex; flex-direction: column;
-    align-items: center;
-    padding-top: 100px; /* 避開 Top Bar */
-}
-
+.page-content-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; }
 .loading-text { color: #aaa; font-size: 14px; }
 
 /* --- 3. Home Card --- */
 .card {
-    /* 1. 設定寬度 */
-    width: 85vw; 
-    max-width: 400px;
-    
-    /* 2. 👇 關鍵修改：強制變成正方形 */
-    /* 使用 aspect-ratio: 1/1 是最現代的寫法，寬高自動相等 */
-    aspect-ratio: 1 / 1;
-    height: auto;   /* 覆蓋掉原本的 height 設定 */
-    min-height: 0;  /* 清除原本的限制 */
-    max-height: none;
-
-    /* 其他樣式保持不變 */
-    background-color: #ddd; 
-    border-radius: 35px;
+    width: var(--card-size); height: var(--card-size); /* 正方形 */
+    background-color: #ddd; border-radius: 35px;
     background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80');
-    background-size: cover; 
-    background-position: center;
+    background-size: cover; background-position: center;
     box-shadow: 0 15px 30px rgba(93, 64, 55, 0.15);
-    position: relative; 
-    overflow: hidden;
+    position: relative; overflow: hidden; margin: 0 auto; flex-shrink: 0;
+    z-index: 5; /* 確保不被遮擋 */
 }
-.card::before {
-    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(30, 30, 30, 0.6); z-index: 2;
-}
+.card::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(30, 30, 30, 0.6); z-index: 2; }
+
 /* --- 4. UI 元件 (Bars) --- */
-
 .top-bar, .bottom-bar {
-    position: fixed; 
-    
-    /* 1. 水平置中 */
-    left: 50%; 
-    transform: translateX(-50%); 
-    
-    /* 2. 寬度設定 */
-    width: 86%;  
-    
-    /* 3. 排列方式：分散對齊 */
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center;
-
-    /* 👇 新增這一行：讓左右兩邊的 Icon 往內縮 5px */
-    padding: 20px 20px; 
-    
-    z-index: 100; 
-    pointer-events: none; 
-    transition: opacity 0.3s;
+    position: fixed; left: 50%; transform: translateX(-50%); width: 86%;
+    display: flex; align-items: center; padding: 0 5px;
+    z-index: 100; pointer-events: none; transition: opacity 0.3s;
 }
-/* --- 上方 Bar (Top Bar) --- */
+.top-bar { top: max(60px, env(safe-area-inset-top)); justify-content: space-between; }
+.bottom-bar { bottom: max(50px, env(safe-area-inset-bottom)); justify-content: center; gap: 60px; }
 
-.top-bar {
-
-/* 依照圖片，它離頂部有一段距離 (避開動態島) */
-
-top: max(80px, env(safe-area-inset-top));
-
-}
-
-
-
-/* --- 下方 Bar (Bottom Bar) --- */
-
-.bottom-bar {
-
-/* 依照圖片，它離底部非常高 (懸浮感) */
-
-bottom: max(80px, env(safe-area-inset-bottom));
-
-}
-
-
-
-/* --- 按鈕容器共用設定 --- */
-
-.btn-container {
-
-pointer-events: auto; /* 恢復按鈕可點擊 */
-
-cursor: pointer;
-
-transition: transform 0.1s;
-
-display: flex; justify-content: center; align-items: center;
-
-}
-
+/* 按鈕樣式 */
+.btn-container { pointer-events: auto; cursor: pointer; transition: transform 0.1s; display: flex; justify-content: center; align-items: center; }
 .btn-container:active { transform: scale(0.92); }
-
-
-
-/* --- 針對圖片中的 Icon 樣式微調 --- */
-
-
-
-/* 1. 頭像與右側通知 (圓形) */
-
-.avatar {
-
-width: 55px; height: 55px;
-
-background-color: #947867; border-radius: 50%;
-
-}
-
-.notification {
-
-width: 55px; height: 55px;
-
-background-color: #947867; border-radius: 50%;
-
-box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-
-}
-
-
-
-/* 2. 中間搜尋條 (長條形) */
-
-.search-pill {
-
-/* 在分散對齊下，設定 flex: 1 或是固定寬度都可以，這裡建議固定寬度讓它不要太長 */
-
-width: 120px;
-
-height: 45px;
-
-background-color: #947867;
-
-border-radius: 22px;
-
-display: flex; justify-content: flex-start; align-items: center; padding-left: 15px;
-
-box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-
-
-/* 讓它在 Bar 中間不會被拉伸，保持置中 */
-
-margin: 0 auto;
-
-/* 若用 space-between，這裡可以用 transform 微調確保絕對居中，或不用動 */
-
-}
-
-
-
-/* 3. 下方中間快門鍵 (大圓) */
-
-.shutter-btn {
-
-width: 76px; height: 76px;
-
-border: 5px solid #F2EBE0; /* 外圈顏色 */
-
-background-color: #947867; border-radius:50%;
-
-box-shadow: 0 0 0 4px #947867 inset; /* 模擬圖片中的內圈層次 */
-
-}
-
-
-
-/* 4. SVG Icon 線條設定 */
-
+.avatar, .notification { width: 55px; height: 55px; background-color: #947867; border-radius: 50%; }
+.search-pill { width: 120px; height: 45px; background-color: #947867; border-radius: 22px; display: flex; align-items: center; padding-left: 15px; margin: 0 auto; }
+.shutter-btn { width: 76px; height: 76px; border: 5px solid #F2EBE0; background-color: #947867; border-radius: 50%; box-shadow: 0 0 0 4px #947867 inset; }
 svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-
 .icon-white svg { stroke: white; stroke-width: 2; }
-
-/* 下方左右兩個 Icon 顏色較深 */
-
 .icon-brown svg { stroke: #8D6E63; stroke-width: 2.5; width: 32px; height: 32px; }
-/* --- 5. 個人頁面 (Profile) --- */
-.profile-page {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: var(--bg-color);
-    z-index: 300; transform: translateX(-100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-    display: flex; flex-direction: column;
-    padding: max(20px, env(safe-area-inset-top)) 30px 40px 30px;
-}
+
+/* --- 5. 日曆樣式 (Calendar) --- */
+.calendar-container { width: 90%; max-width: 350px; margin: 0 auto; position: relative; z-index: 100 !important; pointer-events: auto !important; }
+.weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 15px; }
+.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; row-gap: 20px; }
+.day-cell { width: 100%; aspect-ratio: 1/1; display: flex; justify-content: center; align-items: center; font-size: 16px; color: #9E9E9E; border-radius: 50%; cursor: pointer; position: relative; z-index: 101; }
+.day-cell.has-photo { background-size: cover; background-position: center; color: transparent; box-shadow: 0 2px 5px rgba(0,0,0,0.2); pointer-events: auto !important; }
+
+/* --- 6. 限時動態播放器 (Story Mode) --- */
+#storyPage { background-color: #000; }
+.story-container { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+.story-img-box { width: 100%; height: 80%; background-size: contain; background-repeat: no-repeat; background-position: center; }
+.story-info { color: white; margin-top: 15px; font-size: 14px; letter-spacing: 1px; }
+.story-nav-left, .story-nav-right { position: absolute; top: 0; bottom: 0; width: 50%; z-index: 10; }
+.story-nav-left { left: 0; } .story-nav-right { right: 0; }
+
+/* --- 7. 其他介面 (Profile/Editor/ActionSheet) --- */
+.profile-page, .editor-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); z-index: 300; transform: translateX(-100%); transition: transform 0.3s; display: flex; flex-direction: column; }
 .profile-page.active { transform: translateX(0); }
-.back-btn { width: 40px; height: 40px; background-color: #D7CCC8; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; margin: 10px 0 20px 0; }
-.profile-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 40px; }
-.profile-avatar { width: 100px; height: 100px; background-color: #fff; border-radius: 50%; margin-bottom: 15px; }
-.profile-name { font-size: 22px; font-weight: bold; color: var(--text-dark); }
-.profile-email { font-size: 14px; opacity: 0.6; margin-top: 5px; color: var(--text-dark); }
-.profile-menu { display: flex; flex-direction: column; gap: 20px; width: 100%; }
-.menu-item { font-size: 16px; color: var(--text-dark); font-weight: 500; cursor: pointer; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-.logout-btn { margin-top: auto; width: 100%; height: 50px; background-color: #C1B0A4; color: white; border: none; border-radius: 15px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: max(10px, env(safe-area-inset-bottom)); }
-
-/* --- 6. Action Sheet --- */
-.modal-backdrop {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: opacity 0.3s;
-    z-index: 400;
-}
-.modal-backdrop.active { opacity: 1; pointer-events: auto; }
-
-.action-sheet {
-    position: fixed; bottom: 0; left: 0; width: 100%;
-    background-color: var(--bg-color);
-    border-top-left-radius: 35px; border-top-right-radius: 35px;
-    padding: 10px 25px 30px 25px;
-    padding-bottom: max(30px, env(safe-area-inset-bottom));
-    transform: translateY(100%); z-index: 450;
-    box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
-}
-.sheet-handle-area { width: 100%; height: 40px; display: flex; justify-content: center; align-items: center; }
-.sheet-handle { 
-    width: 20px; /* <--- 這裡改成 20px */
-    height: 5px; 
-    background-color: #D7CCC8; 
-    border-radius: 10px; 
-}
-.sheet-option { display: flex; align-items: center; padding: 18px 0; border-bottom: 1px solid #E0D4C8; color: var(--text-dark); font-weight: 600; }
-.sheet-option svg { width: 24px; height: 24px; margin-right: 15px; stroke: var(--primary-brown); }
-
-/* style.css */
-
-/* 1. 定義變數 */
-:root {
-    --bg-color: #F2EBE0;       
-    --primary-brown: #8D6E63;  
-    --text-dark: #5D4037;
-    /* 定義卡片大小：螢幕寬的 85%，但最大不超過 400px */
-    --card-size: min(85vw, 400px); 
-}
-
-/* 2. 設定卡片為正方形 */
-.card {
-    /* 讓寬高都吃變數 */
-    width: var(--card-size);
-    height: var(--card-size); /* 確保是正方形 */
-    
-    /* 其他樣式 */
-    background-color: #ddd; 
-    border-radius: 35px;
-    background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80');
-    background-size: cover; 
-    background-position: center;
-    box-shadow: 0 15px 30px rgba(93, 64, 55, 0.15);
-    position: relative; 
-    overflow: hidden;
-    margin: 0 auto;
-    flex-shrink: 0;
-}
-
-/* 3. 設定 Bar 鎖定照片位置 (核心修正) */
-.top-bar, .bottom-bar {
-    position: fixed; 
-    width: var(--card-size); /* 寬度跟卡片一樣 */
-    
-    /* 關鍵：定位在螢幕正中心 */
-    left: 50%; 
-    top: 50%;
-    bottom: auto; /* 清除舊設定 */
-    
-    display: flex; 
-    align-items: center;
-    padding: 0 5px; /* 左右內縮 5px */
-    
-    z-index: 100; pointer-events: none;
-    transition: opacity 0.3s;
-}
-
-.top-bar { 
-    justify-content: space-between;
-    /* 往上移動：(卡片一半高度) + (30px 間距) */
-    margin-top: calc( (var(--card-size) / -2) - 30px );
-    transform: translate(-50%, -100%); /* 修正 Y 軸定位點 */
-}
-
-.bottom-bar { 
-    justify-content: center;
-    gap: 80px;
-    /* 往下移動：(卡片一半高度) + (30px 間距) */
-    margin-top: calc( (var(--card-size) / 2) + 30px );
-    transform: translate(-50%, 0);
-}
-
-.calendar-container {
-    width: 90%;
-    max-width: 350px;
-    background: transparent;
-    margin: 0 auto; /* 確保置中 */
-}
-
-.weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    text-align: center;
-    font-size: 14px;
-    font-weight: bold;
-    color: #000;
-    margin-bottom: 15px;
-}
-
-.days {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 10px; /* 日期之間的間距 */
-    row-gap: 20px;
-}
-
-.day-cell {
-    width: 100%;
-    aspect-ratio: 1/1; /* 強制正方形 */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 16px;
-    color: #9E9E9E;
-    border-radius: 50%; /* 圓形 */
-    position: relative;
-    cursor: pointer;
-    font-weight: 500;
-}
-
-/* 當這一天有照片時的樣式 */
-.day-cell.has-photo {
-    background-size: cover;
-    background-position: center;
-    color: white; /* 有照片時文字變白 */
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-/* 今天的日期標記 (選填) */
-.day-cell.today {
-    color: #8D6E63;
-    font-weight: bold;
-}
-
-/* --- 編輯頁面 (Editor Page) --- */
-.editor-page {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: var(--bg-color);
-    z-index: 600; /* 比所有東西都高 */
-    transform: translateY(100%); /* 預設藏在下面 */
-    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    display: flex; flex-direction: column;
-}
+.editor-page { transform: translateY(100%); z-index: 600; }
 .editor-page.active { transform: translateY(0); }
-
-/* 頂部導航 */
-.editor-header {
-    height: 50px;
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 0 20px;
-    margin-top: max(10px, env(safe-area-inset-top)); /* 避開瀏海 */
-}
-.header-btn { font-size: 16px; font-weight: 500; color: var(--text-dark); cursor: pointer; }
-.header-title { font-weight: bold; font-size: 17px; }
-.next-btn { color: #8D6E63; font-weight: 700; }
-
-/* 預覽區 (上半部) */
-.preview-area {
-    width: 100%;
-    height: 45vh; /* 佔螢幕高度 45% */
-    background-color: #ddd;
-    background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c'); /* 預設圖 */
-    background-size: cover; background-position: center;
-    transition: background-image 0.2s;
-}
-
-/* 工具列 (中間黑色膠囊區) */
-.editor-tools-bar {
-    display: flex; align-items: center;
-    padding: 10px 15px;
-    background-color: var(--bg-color);
-    gap: 10px;
-}
-.tool-capsule {
-    height: 36px;
-    background-color: rgba(93, 64, 55, 0.1); /* 淺褐色背景 */
-    border-radius: 18px;
-    display: flex; justify-content: center; align-items: center;
-    padding: 0 12px; cursor: pointer;
-    color: var(--text-dark);
-}
-.tool-capsule.right {
-    margin-left: auto; /* 推到最右邊 */
-    background-color: rgba(93, 64, 55, 0.8); /* 深色背景 */
-    color: white;
-    font-size: 12px; font-weight: bold;
-    gap: 6px;
-}
-
-/* 圖庫區 (下方可滾動網格) */
-.gallery-grid {
-    flex: 1; /* 填滿剩下的空間 */
-    background-color: #fff;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 一排 4 張 */
-    gap: 2px;
-    overflow-y: auto;
-    padding-top: 2px;
-}
-.gallery-item {
-    width: 100%;
-    aspect-ratio: 1/1; /* 正方形 */
-    background-color: #eee;
-    background-size: cover; background-position: center;
-    cursor: pointer;
-    position: relative;
-}
-/* 選中時的遮罩 */
-.gallery-item.selected::after {
-    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(255,255,255,0.5);
-    border: 3px solid #8D6E63; box-sizing: border-box;
-}
-
-/* 第一格：開相機 */
-.camera-roll-trigger {
-    background-color: #ccc;
-    display: flex; justify-content: center; align-items: center;
-}
-
-
-/* --- 8. 照片列表樣式 (Photo Stream) --- */
-.timeline-item {
-    margin-bottom: 25px; /* 照片之間的距離 */
-    width: 100%;
-    animation: fadeIn 0.4s ease-out;
-}
-
-.timeline-card {
-    background: white;
-    border-radius: 20px; /* 圓角 */
-    overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08); /* 陰影 */
-}
-
-.timeline-img {
-    width: 100%;
-    aspect-ratio: 4/3; /* 照片比例 */
-    background-size: cover;
-    background-position: center;
-    display: block;
-}
-
-.timeline-caption {
-    padding: 12px 15px;
-    font-size: 13px;
-    color: #999;
-    text-align: right;
-    background-color: #fff;
-    border-top: 1px solid #f0f0f0;
-}
-
-/* 簡單的淡入動畫 */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* 1. 頁面預設樣式 (藏在下面) */
-.editor-page {
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%;
-    background-color: #F2EBE0; /* 務必確認有背景色，不然會透明 */
-    z-index: 700; /* 層級要夠高 */
-    
-    /* 關鍵：預設往下藏起來 */
-    transform: translateY(100%); 
-    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    
-    display: flex; 
-    flex-direction: column;
-}
-
-/* 2. 啟動樣式 (滑上來) - 少了這個就滑不動！ */
-.editor-page.active {
-    transform: translateY(0);
-}
-
-/* style.css 請加在最後面 */
-
-/* 強制讓日曆層級提高，並確保滑鼠游標變化 */
-.calendar-container {
-    position: relative;
-    z-index: 10; /* 提高層級 */
-    pointer-events: auto !important; /* 強制開啟點擊 */
-}
-
-.day-cell {
-    cursor: pointer;
-    pointer-events: auto !important; /* 強制開啟點擊 */
-}
-
-/* 確保滑動軌道不會擋住點擊 */
-.carousel-track {
-    pointer-events: auto;
-}
-/* style.css 新增 */
-
-/* --- 9. 限時動態播放器 (Story Mode) --- */
-.story-container {
-    width: 100%;
-    height: 100%;
-    background-color: #000; /* 黑底 */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-}
-
-.story-img-box {
-    width: 100%;
-    height: 80%; /* 留空間給標題和時間 */
-    background-size: contain; /* 完整顯示，不裁切 */
-    background-repeat: no-repeat;
-    background-position: center;
-    transition: background-image 0.2s ease;
-}
-
-.story-info {
-    color: white;
-    margin-top: 15px;
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 1px;
-}
-
-/* 左右點擊感應區 (隱形按鈕) */
-.story-nav-left, .story-nav-right {
-    position: absolute;
-    top: 0; 
-    bottom: 0;
-    width: 50%; /* 各佔一半 */
-    z-index: 10;
-    /* background: rgba(255,0,0,0.1); 測試時可打開看範圍 */
-}
-.story-nav-left { left: 0; }
-.story-nav-right { right: 0; }
-
-/* 確保日曆容器在最上層，且接收滑鼠事件 */
-#calendarDays {
-    position: relative;
-    z-index: 50 !important; /* 提高層級 */
-    pointer-events: auto !important; /* ⚠️ 關鍵：強制開啟點擊 */
-}
-
-/* 確保有照片的格子滑鼠會變成手型，且接收點擊 */
-.day-cell.has-photo {
-    cursor: pointer !important;
-    pointer-events: auto !important; /* ⚠️ 關鍵：強制開啟點擊 */
-}
-
-/* 確保格子裡面的內容不會擋住點擊 */
-.day-cell.has-photo * {
-    pointer-events: none;
-}
-
-/* style.css */
-
-/* --- 修正版：恢復置中，並處理遮擋 --- */
-.page-container {
-    width: 33.333%; 
-    height: 100%;
-    flex-shrink: 0;
-    position: relative;
-    
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center; /* 改回 center */
-    
-    /* 確保內容可以捲動，但不影響佈局 */
-    overflow-y: auto; 
-    overflow-x: hidden;
-}
-/* === 強制日曆點擊修正 (貼在 style.css 最後面) === */
-
-/* 1. 讓 Memory 頁面層級最高 (當滑過去時) */
-#page-memory {
-    z-index: 50 !important; 
-    overflow-y: auto !important; /* 確保內容太長時可以捲動 */
-}
-
-/* 2. 讓日曆容器浮在最上面，並強制接收點擊 */
-.calendar-container {
-    position: relative;
-    z-index: 100 !important; /* 比任何背景都高 */
-    pointer-events: auto !important; /* ⚠️ 關鍵：強制開啟點擊 */
-    margin-top: 20px; /* 避免貼太上面 */
-}
-
-/* 3. 確保每個格子都能點 */
-.day-cell {
-    position: relative;
-    z-index: 101 !important; 
-    cursor: pointer;
-}
-
-/* 4. 如果有照片，確保照片不擋路 */
-.day-cell.has-photo {
-    pointer-events: auto !important;
-}
-
-/* 5. 確保首頁的卡片不會因為陰影太大而擋到旁邊 */
-.card {
-    z-index: 2; /* 確保卡片不會無意間蓋過 UI Bar，但比 Memory 頁面低 */
-}
+.modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; z-index: 400; transition: opacity 0.3s; }
+.modal-backdrop.active { opacity: 1; pointer-events: auto; }
+.action-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--bg-color); border-radius: 35px 35px 0 0; padding: 20px; transform: translateY(100%); z-index: 450; transition: transform 0.3s; }
+.gallery-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; overflow-y: auto; padding-top: 2px; flex: 1; }
+.gallery-item { aspect-ratio: 1/1; background-color: #eee; background-size: cover; }
+.preview-area { width: 100%; height: 45vh; background-color: #ddd; background-size: cover; background-position: center; }
+/* 確保工具列按鈕樣式 */
+.editor-header { height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-top: 50px; }
+.editor-tools-bar { display: flex; gap: 10px; padding: 10px 15px; }
+.tool-capsule { height: 36px; background: rgba(141, 110, 99, 0.1); border-radius: 18px; padding: 0 12px; display: flex; align-items: center; justify-content: center; }
