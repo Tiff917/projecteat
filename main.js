@@ -190,54 +190,109 @@ function handleBatchUpload(files) {
 }
 
 // ==========================================
-// 6. 限時動態 (Story Mode)
+// 6. 限時動態 (Story Mode) - 全新改版
 // ==========================================
 function openStoryMode(dateStr, photos) {
     let page = document.getElementById('storyPage');
+    // 1. 初始化頁面結構 (只執行一次)
     if(!page) {
         page = document.createElement('div');
         page.id = 'storyPage';
         Object.assign(page.style, {
             position:'fixed', top:'0', left:'0', width:'100%', height:'100%',
             backgroundColor:'#000', zIndex:'9999', transform:'translateY(100%)',
-            transition:'transform 0.3s', display:'flex', flexDirection:'column'
+            transition:'transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)', // 更滑順的轉場
+            display:'flex', flexDirection:'column'
         });
-        page.innerHTML = `<div id="storyContent" style="width:100%;height:100%;"></div>`;
+        
+        // 新的 HTML 結構：頂部進度條 + 滿版內容
+        page.innerHTML = `
+            <div id="storyProgressBar" class="story-progress-bar"></div>
+            <div id="storyContent" style="width:100%; height:100%; position:relative;"></div>
+        `;
         document.body.appendChild(page);
+
+        // --- 加入下滑關閉手勢偵測 ---
+        let touchStartY = 0;
+        page.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+        }, {passive: true});
+
+        page.addEventListener('touchend', (e) => {
+            const touchEndY = e.changedTouches[0].clientY;
+            const diffY = touchEndY - touchStartY;
+            // 如果向下滑動超過 80px，則關閉頁面
+            if (diffY > 80) {
+                closeStory();
+            }
+        });
     }
 
+    // 關閉 Story 的函式
+    function closeStory() {
+        page.style.transform = 'translateY(100%)';
+    }
+
+    // 2. 準備播放資料
     photos.sort((a,b) => a.timestamp - b.timestamp);
     let idx = 0;
-    
-    function show() {
-        if(idx >= photos.length) {
-            page.style.transform = 'translateY(100%)';
-            return;
+    const progressBar = document.getElementById('storyProgressBar');
+    const player = document.getElementById('storyContent');
+
+    // 3. 初始化進度條小長條
+    progressBar.innerHTML = '';
+    for(let i=0; i<photos.length; i++) {
+        const segment = document.createElement('div');
+        segment.className = 'progress-segment';
+        progressBar.appendChild(segment);
+    }
+    const segments = progressBar.getElementsByClassName('progress-segment');
+
+    // 更新進度條狀態
+    function updateProgressBar(currentIdx) {
+        for(let i=0; i<segments.length; i++) {
+            if(i < currentIdx) {
+                 segments[i].style.backgroundColor = 'rgba(255,255,255,1)'; // 已播完
+            } else if(i === currentIdx) {
+                 segments[i].style.backgroundColor = 'rgba(255,255,255,1)'; // 播放中
+            } else {
+                 segments[i].style.backgroundColor = 'rgba(255,255,255,0.3)'; // 未播放
+            }
         }
-        if(idx < 0) idx = 0;
-        
-        const url = URL.createObjectURL(photos[idx].imageBlob);
-        const player = document.getElementById('storyContent');
-        player.innerHTML = `
-            <div class="story-container">
-                <div class="story-img-box" style="background-image:url('${url}')"></div>
-                <div class="story-info">${dateStr} ${photos[idx].time} (${idx+1}/${photos.length})</div>
-                <div style="position:absolute;top:0;left:0;width:50%;height:100%;z-index:20;" onclick="event.stopPropagation(); window.storyPrev()"></div>
-                <div style="position:absolute;top:0;right:0;width:50%;height:100%;z-index:20;" onclick="event.stopPropagation(); window.storyNext()"></div>
-                <div style="position:absolute;top:40px;right:20px;color:white;font-size:30px;z-index:30;" onclick="document.getElementById('storyPage').style.transform='translateY(100%)'">&times;</div>
-            </div>
-        `;
     }
     
+    // 4. 顯示單張照片
+    function show() {
+        // 播完最後一張後，再點擊則關閉
+        if(idx >= photos.length) {
+            closeStory();
+            return;
+        }
+        if(idx < 0) idx = 0; // 防止第一張往前切
+        
+        const url = URL.createObjectURL(photos[idx].imageBlob);
+        
+        // 更新畫面內容
+        player.innerHTML = `
+            <div class="story-img-box" style="background-image:url('${url}'); width:100%; height:100%;"></div>
+            <div style="position:absolute;top:0;left:0;width:50%;height:100%;z-index:20;" onclick="event.stopPropagation(); window.storyPrev()"></div>
+            <div style="position:absolute;top:0;right:0;width:50%;height:100%;z-index:20;" onclick="event.stopPropagation(); window.storyNext()"></div>
+        `;
+        
+        // 更新進度條
+        updateProgressBar(idx);
+    }
+    
+    // 綁定到全域的切換函式
     window.storyPrev = () => { idx--; show(); };
     window.storyNext = () => { idx++; show(); };
 
+    // 5. 啟動播放
     setTimeout(() => {
         page.style.transform = 'translateY(0)';
         show();
     }, 10);
 }
-
 // ==========================================
 // 7. 互動監聽 (確保按鈕功能正常)
 // ==========================================
