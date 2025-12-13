@@ -195,6 +195,46 @@ async function renderCalendar() {
     setupCalendarListener();
 }
 
+// main.js
+
+// ==========================================
+// 更新輪播狀態 (智慧鎖定版：解決點不到的問題)
+// ==========================================
+function updateCarousel() {
+    // 1. 執行滑動動畫
+    track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    track.style.transform = `translateX(-${currentPage * 33.333}%)`;
+    
+    // 2. 控制 Top/Bottom Bar 的顯示
+    const isHome = (currentPage === 1);
+    if(topBar) {
+        topBar.style.opacity = isHome ? '1' : '0';
+        topBar.style.pointerEvents = isHome ? 'auto' : 'none';
+    }
+    if(bottomBar) {
+        bottomBar.style.opacity = isHome ? '1' : '0';
+        bottomBar.style.pointerEvents = isHome ? 'auto' : 'none';
+    }
+
+    // 3. 🔥 關鍵修正：管理頁面的點擊權限 (Z-Index 與 Pointer Events)
+    // 這樣做可以保證：當你在看 Memory 時，Home 絕對不會擋住你
+    const pages = document.querySelectorAll('.page-container');
+    pages.forEach((page, index) => {
+        if (index === currentPage) {
+            // 當前頁面：可以點，層級最高
+            page.style.pointerEvents = 'auto';
+            page.style.zIndex = '10';
+            page.style.visibility = 'visible'; // 確保可見
+        } else {
+            // 其他頁面：不能點，層級降低
+            page.style.pointerEvents = 'none';
+            page.style.zIndex = '0';
+            
+            // 選填：如果你希望滑動完之後，隔壁頁完全隱藏（效能更好）
+            // page.style.visibility = 'hidden'; 
+        }
+    });
+}
 // 輔助函式：抓取資料庫照片
 function getAllPhotosGrouped() {
     return new Promise((resolve) => {
