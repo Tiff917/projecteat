@@ -108,21 +108,23 @@ async function loadExternalPages() {
 loadExternalPages();
 
 // ==========================================
-// 4. 繪製日曆 (封面顯示最新照片)
+// ==========================================
+// 4. 繪製日曆 (整合版：最新封面 + 限時動態)
 // ==========================================
 async function renderCalendar() {
     const calendarContainer = document.getElementById('calendarDays');
     if (!calendarContainer) return; 
 
+    // 1. 清空容器並移除舊監聽器 (防止重複綁定)
     calendarContainer.innerHTML = ''; 
     const newContainer = calendarContainer.cloneNode(true);
     calendarContainer.parentNode.replaceChild(newContainer, calendarContainer);
     const activeContainer = document.getElementById('calendarDays');
 
+    // 2. 設定日期標題
     const date = new Date();
     const year = date.getFullYear();
     const month = date.getMonth(); 
-    
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const title = document.getElementById('calendarMonth');
     if(title) title.textContent = `${monthNames[month]} ${year}`;
@@ -130,12 +132,15 @@ async function renderCalendar() {
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+    // 3. 取得照片資料
     const photosGroup = await getAllPhotosGrouped();
 
+    // 4. 產生空白格
     for (let i = 0; i < firstDay; i++) {
         activeContainer.appendChild(document.createElement('div'));
     }
 
+    // 5. 產生日期格
     for (let day = 1; day <= daysInMonth; day++) {
         const dayCell = document.createElement('div');
         dayCell.classList.add('day-cell');
@@ -145,37 +150,44 @@ async function renderCalendar() {
         const currentDayStr = day.toString().padStart(2, '0');
         const dateString = `${year}-${currentMonthStr}-${currentDayStr}`;
 
+        // 如果這天有照片
         if (photosGroup[dateString] && photosGroup[dateString].length > 0) {
             dayCell.classList.add('has-photo');
             
-            // ⚠️ 關鍵修改：對照片依照時間「由新到舊」排序
+            // 🔥 重點 1：依照時間「由新到舊」排序
             const sortedPhotos = [...photosGroup[dateString]].sort((a, b) => b.timestamp - a.timestamp);
             
-            // 取第一張（也就是最新的一張）當封面
+            // 🔥 重點 2：取第一張（最新）當作日曆封面
             const latestPhoto = sortedPhotos[0];
             const imgUrl = URL.createObjectURL(latestPhoto.imageBlob);
             
             dayCell.style.backgroundImage = `url('${imgUrl}')`;
-            dayCell.textContent = ''; 
+            dayCell.textContent = ''; // 隱藏數字
             
+            // 埋入資料供點擊使用
             dayCell.dataset.date = dateString; 
             dayCell.dataset.hasPhoto = "true";
         }
         activeContainer.appendChild(dayCell);
     }
 
+    // 6. 監聽點擊 (Event Delegation)
     activeContainer.addEventListener('click', (e) => {
         const cell = e.target.closest('.day-cell');
+        // 確保點到的是有照片的格子
         if (cell && cell.dataset.hasPhoto === "true") {
             const targetDate = cell.dataset.date;
+            
             if (photosGroup[targetDate]) {
-                // 呼叫限時動態模式
+                console.log("開啟 Story 模式:", targetDate);
+                // 🔥 重點 3：這裡呼叫 Story 模式，而不是 updateCarousel (所以不會跳回首頁)
                 openStoryMode(targetDate, photosGroup[targetDate]);
             }
         }
     });
 }
 
+// 輔助函式：抓取資料庫照片
 function getAllPhotosGrouped() {
     return new Promise((resolve) => {
         if (!db) { resolve({}); return; }
@@ -196,6 +208,96 @@ function getAllPhotosGrouped() {
     });
 }
 
+// ==========================================
+// 5. 限時動態播放器 (Story Mode Logic)
+// ==========================================
+function openStoryMode(dateStr, photosArray) {
+    // 1. 自動建立頁面 (防呆機制：如果 HTML 裡沒有，JS 自己蓋一個)
+    let targetPage = document.getElementById('timelinePage');
+    if (!targetPage) {
+        targetPage = document.createElement('div');
+        targetPage.id = 'timelinePage';
+        targetPage.className = 'editor-page';
+        // 強制寫入黑色背景樣式
+        Object.assign(targetPage.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: '#000', zIndex: '9999',
+            transform: 'translateY(100%)', transition: 'transform 0.3s ease',
+            display: 'flex', flexDirection: 'column'
+        });
+        
+        // 建立簡單的播放器結構
+        targetPage.innerHTML = `
+            <div style="position:absolute; top:40px; right:20px; z-index:20;">
+                <span id="closeStoryBtn" style="color:white; font-size:30px; cursor:pointer; font-weight:bold;">&times;</span>
+            </div>
+            <div id="storyPlayer" style="width:100%; height:100%; display:flex; justify-content:center; align-items:center;"></div>
+        `;
+        document.body.appendChild(targetPage);
+        
+        // 綁定關閉按鈕
+        document.getElementById('closeStoryBtn').onclick = () => {
+            targetPage.style.transform = 'translateY(100%)';
+            targetPage.classList.remove('active');
+        };
+    }
+
+    const player = document.getElementById('storyPlayer');
+    
+    // 2. 播放順序：由舊到新 (看故事的感覺)
+    photosArray.sort((a, b) => a.timestamp - b.timestamp);
+
+    let currentIndex = 0;
+
+    // 3. 渲染單張照片的函式
+    function renderStory() {
+        // 如果播完了，自動關閉
+        if (currentIndex >= photosArray.length) {
+            targetPage.style.transform = 'translateY(100%)';
+            targetPage.classList.remove('active');
+            return;
+        }
+        // 防止索引負數
+        if (currentIndex < 0) currentIndex = 0;
+
+        const photo = photosArray[currentIndex];
+        const imgUrl = URL.createObjectURL(photo.imageBlob);
+
+        // 更新畫面
+        player.innerHTML = `
+            <div style="width:100%; height:100%; position:relative; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                <div style="width:100%; height:80%; background-image:url('${imgUrl}'); background-size:contain; background-repeat:no-repeat; background-position:center;"></div>
+                
+                <div style="color:white; margin-top:15px; font-size:14px; letter-spacing:1px;">
+                    ${dateStr} ${photo.time} (${currentIndex + 1}/${photosArray.length})
+                </div>
+
+                <div id="storyPrev" style="position:absolute; top:0; left:0; width:50%; height:100%; z-index:10;"></div>
+                <div id="storyNext" style="position:absolute; top:0; right:0; width:50%; height:100%; z-index:10;"></div>
+            </div>
+        `;
+
+        // 綁定觸控事件
+        document.getElementById('storyPrev').onclick = (e) => {
+            e.stopPropagation();
+            currentIndex--;
+            renderStory();
+        };
+        document.getElementById('storyNext').onclick = (e) => {
+            e.stopPropagation();
+            currentIndex++;
+            renderStory();
+        };
+    }
+
+    // 4. 啟動播放
+    targetPage.classList.add('active');
+    setTimeout(() => {
+        targetPage.style.transform = 'translateY(0)';
+    }, 10);
+    
+    renderStory(); // 播放第一張
+}
 // ==========================================
 // 5. 批次上傳
 // ==========================================
