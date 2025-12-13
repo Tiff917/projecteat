@@ -8,9 +8,9 @@ const card = document.querySelector('.card');
 
 const isVIP = true; 
 
-// 🔥 資料庫強制升級 (解決多圖失敗問題)
+// 資料庫設定
 let db;
-const DB_NAME = 'GourmetApp_Final_v13'; 
+const DB_NAME = 'GourmetApp_Final_v15'; 
 const STORE_PHOTOS = 'photos';
 const STORE_POSTS = 'posts';
 const DB_VERSION = 1;
@@ -38,7 +38,7 @@ function initDB() {
     };
     request.onsuccess = (e) => {
         db = e.target.result;
-        console.log("資料庫連線成功 (v13)");
+        console.log("資料庫連線成功 (v15)");
         renderCalendar();
         renderCommunity(); 
     };
@@ -65,7 +65,7 @@ async function loadExternalPages() {
 loadExternalPages();
 
 // ==========================================
-// 4. 編輯器邏輯
+// 4. 編輯器邏輯 (修復多選)
 // ==========================================
 const editBtn = document.getElementById('editBtn');
 const editorPage = document.getElementById('editorPage');
@@ -99,8 +99,17 @@ function renderInitialGrid() {
     editorGrid.innerHTML = '';
     const addBtn = document.createElement('div');
     addBtn.className = 'gallery-add-btn';
-    addBtn.innerHTML = `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Open`;
-    addBtn.onclick = () => multiPhotoInput.click();
+    
+    // ⚠️ 關鍵修復：使用 Label 包裹，確保點擊一定觸發 Input
+    addBtn.innerHTML = `
+        <label for="multiPhotoInput" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Open
+        </label>
+    `;
+    // 移除 JS onclick，改用 Label 的原生行為
+    addBtn.onclick = null; 
+    
     editorGrid.appendChild(addBtn);
 
     for(let i=0; i<7; i++) {
@@ -127,10 +136,15 @@ function renderEditorPreview() {
     editorPreview.style.backgroundImage = `url('${firstUrl}')`;
     
     editorGrid.innerHTML = '';
+    
+    // 重建 Label 按鈕
     const addBtn = document.createElement('div');
     addBtn.className = 'gallery-add-btn';
-    addBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
-    addBtn.onclick = () => multiPhotoInput.click();
+    addBtn.innerHTML = `
+        <label for="multiPhotoInput" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;">
+            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </label>
+    `;
     editorGrid.appendChild(addBtn);
 
     currentEditFiles.forEach(file => {
@@ -185,20 +199,18 @@ if(publishBtn) {
         const memoryStore = tx.objectStore(STORE_PHOTOS);
         const postStore = tx.objectStore(STORE_POSTS);
 
-        // 1. 存入 Memory
         currentEditFiles.forEach((file, index) => {
             memoryStore.add({
                 date: todayStr, time: timeStr, imageBlob: file, timestamp: now.getTime() + index
             });
         });
 
-        // 2. 存入社群 (多圖陣列)
         if(isVIP) {
             postStore.add({
                 user: "My Account",
                 avatar: "",
                 location: currentEditLocation || "Unknown",
-                images: currentEditFiles, // 存陣列
+                images: currentEditFiles, 
                 likes: 0,
                 caption: currentEditTagged ? "With friends! ❤️" : "New post ✨",
                 timestamp: now.getTime(),
@@ -219,7 +231,7 @@ if(publishBtn) {
 }
 
 // ==========================================
-// 5. 社群頁面渲染 (正方形多圖 + 留言)
+// 5. 社群頁面渲染 (正方形 100vw + 留言修復)
 // ==========================================
 function renderCommunity() {
     const container = document.getElementById('feedContainer');
@@ -283,23 +295,15 @@ function renderCommunity() {
 
             card.querySelector('.like-btn').onclick = function() { this.classList.toggle('liked'); };
             
-            // 綁定開啟留言板 (這裡必須把 post 物件存起來，稍後用)
             const commentBtns = card.querySelectorAll('.comment-btn');
-            commentBtns.forEach(btn => {
-                btn.onclick = () => {
-                    currentPost = post; // 存到全域變數
-                    openCommentSheet(post);
-                }
-            });
+            commentBtns.forEach(btn => btn.onclick = () => openCommentSheet(post));
 
             container.appendChild(card);
         });
     };
 }
 
-// ⚠️ 留言板邏輯 (修正版：綁定到 Window 全域)
-let currentPost = null;
-
+// ⚠️ 留言板邏輯 (修正版：綁定全域 onclick)
 function openCommentSheet(post) {
     let sheet = document.getElementById('commentSheet');
     if(!sheet) {
@@ -308,14 +312,14 @@ function openCommentSheet(post) {
         bd.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:500;opacity:0;pointer-events:none;transition:opacity 0.3s;';
         document.body.appendChild(bd);
         
-        // ⚠️ 關鍵：Post 按鈕直接呼叫 window.sendComment()
+        // ⚠️ 注意這裡：onclick="window.handleSendComment()"
         sheet.innerHTML = `
             <div class="comment-header">Comments <div class="close-comment-btn">&times;</div></div>
             <div class="comment-list" id="commentList"></div>
             <div class="comment-input-area">
                 <div class="feed-avatar" style="width:32px;height:32px;margin-right:10px;"></div>
                 <input type="text" class="comment-input" placeholder="Add a comment..." id="newCommentInput">
-                <div class="comment-send-btn" onclick="sendComment()">Post</div>
+                <div class="comment-send-btn" onclick="window.handleSendComment()">Post</div>
             </div>
         `;
         document.body.appendChild(sheet);
@@ -337,8 +341,8 @@ function openCommentSheet(post) {
     setTimeout(() => { bd.style.opacity='1'; bd.style.pointerEvents='auto'; sheet.classList.add('active'); }, 10);
 }
 
-// 🔥 全域發送留言函式
-window.sendComment = function() {
+// 🔥 全域發送函式
+window.handleSendComment = function() {
     const inp = document.getElementById('newCommentInput');
     const list = document.getElementById('commentList');
     
