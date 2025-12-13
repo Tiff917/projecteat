@@ -188,32 +188,34 @@ if(tagPeopleBtn) {
     });
 }
 
-// D. 標註地點 (GPS)
+// main.js (修改定位邏輯)
+
+// D. 標註地點 (強制顯示 Kaohsiung)
 if(tagLocationBtn) {
     tagLocationBtn.addEventListener('click', () => {
-        // 為了讓體驗更好，我們直接模擬定位成功
+        // 1. 變更按鈕狀態為「啟用」
         tagLocationBtn.classList.add('active');
         const txt = document.getElementById('locationText');
         
-        // 顯示載入中...
+        // 2. 顯示載入中...
         if(txt) txt.textContent = "Locating...";
         
-        // 模擬 0.5 秒後定位到高雄
+        // 3. 模擬定位過程 (0.5秒後顯示高雄)
         setTimeout(() => {
-            // 這裡設定你想要顯示的地點名稱
-            const locationName = "Kaohsiung City"; 
+            // 強制設定地點名稱
+            const locationName = "Kaohsiung"; 
             
-            // 寫入變數
+            // 寫入變數 (讓之後發文可以存到資料庫)
             currentEditLocation = locationName;
             
-            // 更新 UI 文字
-            if(txt) txt.textContent = "Kaohsiung";
+            // 更新畫面上看到的文字
+            if(txt) txt.textContent = locationName;
             
-            alert(`定位成功：${locationName}`);
+            // 也可以選擇不要跳 alert，直接顯示就好，這樣比較順
+            // alert(`定位成功：${locationName}`); 
         }, 500);
     });
 }
-
 // E. 關閉編輯器
 if(cancelEditBtn) {
     cancelEditBtn.addEventListener('click', () => {
