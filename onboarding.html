@@ -2,57 +2,71 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Preference Selection</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <style>
-        /* 莫蘭迪配色方案 (Morandi Color Palette)
-           #D7BDB0 - 暖粉棕 (Primary/Active)
-           #E3D5CA - 米膚色 (Global Background)
-           #F5EBE1 - 奶油色 (Phone Frame Background)
-           #D6CCC2 - 暖灰色 (Inactive Options)
-           #6D5D55 - 深暖棕 (Text)
-           #9C8E87 - 輔助灰
-        */
+        /* 莫蘭迪配色方案 */
+        :root {
+            --primary: #D7BDB0;      /* 暖粉棕 */
+            --bg-global: #E3D5CA;    /* 米膚色 */
+            --bg-phone: #F5EBE1;     /* 奶油色 */
+            --inactive: #D6CCC2;     /* 暖灰色 */
+            --text-dark: #6D5D55;    /* 深暖棕 */
+            --text-light: #FFFFFF;
+        }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            user-select: none; /* 防止連點時選取文字 */
-            -webkit-tap-highlight-color: transparent; /* 移除手機點擊高亮 */
+            -webkit-tap-highlight-color: transparent; /* 移除手機點擊藍色高亮 */
+            user-select: none; /* 防止文字被選取 */
         }
 
         body {
-            background-color: #E3D5CA; 
+            background-color: var(--bg-global); 
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            /* 避免手機瀏覽器網址列導致的高度跳動 */
+            height: 100dvh; 
         }
 
         .phone-container {
-            width: 375px;
-            height: 762px;
-            background-color: #F5EBE1;
-            border-radius: 40px;
-            box-shadow: 0 20px 40px rgba(100, 80, 70, 0.1);
+            /* RWD 修正：寬度改為百分比，最大寬度限制為 375px */
+            width: 100%;
+            max-width: 375px;
+            height: 100%;
+            max-height: 812px; /* 模擬 iPhone X 高度 */
+            
+            background-color: var(--bg-phone);
+            box-shadow: 0 20px 40px rgba(100, 80, 70, 0.15);
             position: relative;
             padding: 20px 30px;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            border: 8px solid #333; /* 模擬手機邊框 */
         }
 
-        /* --- 頂部區域 (Notch & Status Bar) --- */
+        /* 如果是在桌面瀏覽，加上圓角和邊框模擬手機 */
+        @media (min-width: 400px) {
+            .phone-container {
+                height: 762px;
+                border-radius: 40px;
+                border: 8px solid #333;
+            }
+        }
+
+        /* --- 頂部區域 --- */
         .status-bar {
             display: flex;
             justify-content: space-between;
             font-size: 14px;
             font-weight: 600;
-            color: #000000;
+            color: #000;
             margin-top: 5px;
             margin-bottom: 20px;
             padding: 0 10px;
@@ -75,8 +89,8 @@
         .header {
             text-align: center;
             margin-top: 40px;
-            margin-bottom: 60px; /* 拉大與選項的距離 */
-            height: 80px; 
+            margin-bottom: 40px; 
+            min-height: 80px; 
             display: flex;
             align-items: center;
             justify-content: center;
@@ -86,7 +100,7 @@
             font-size: 26px;
             font-weight: 600;
             line-height: 1.4;
-            color: #6D5D55; 
+            color: var(--text-dark); 
             letter-spacing: 0.5px;
         }
 
@@ -95,47 +109,56 @@
             display: flex;
             gap: 20px;
             height: 250px;
-            margin-bottom: 30px; /* 下方留白給進度條 */
+            margin-bottom: 30px;
+            perspective: 1000px; /* 為動畫做準備 */
         }
 
         .option-box {
             flex: 1;
-            background-color: #D6CCC2; 
-            border-radius: 20px; /* 圓角調整得更柔和 */
+            background-color: var(--inactive); 
+            border-radius: 24px;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
             position: relative;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            text-align: center;
+            padding: 10px;
         }
 
         .option-box span {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 600;
-            color: #6D5D55;
-            letter-spacing: 2px;
+            color: var(--text-dark);
+            letter-spacing: 1px;
+            transition: color 0.2s;
         }
 
         /* 選中狀態 */
         .option-box.selected {
-            background-color: #D7BDB0; 
-            transform: translateY(-5px); /* 輕微上浮 */
+            background-color: var(--primary); 
+            transform: translateY(-5px);
             box-shadow: 0 10px 20px rgba(215, 189, 176, 0.5);
         }
         
         .option-box.selected span {
-            color: #FFFFFF; 
+            color: var(--text-light); 
         }
 
-        /* --- 進度指示點 (移到這裡) --- */
+        /* 按下時的縮放效果 (UX 優化) */
+        .option-box:active {
+            transform: scale(0.96) translateY(-2px);
+        }
+
+        /* --- 進度指示點 --- */
         .progress-dots {
             display: flex;
             justify-content: center;
-            gap: 10px;
-            margin-bottom: 40px; /* 與下方按鈕的距離 */
-            height: 20px;
+            gap: 8px;
+            margin-bottom: auto; /* 將按鈕推到底部 */
+            padding-bottom: 20px;
             align-items: center;
         }
 
@@ -143,13 +166,13 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background-color: #D6CCC2;
+            background-color: var(--inactive);
             transition: all 0.3s ease;
         }
 
         .dot.active {
-            width: 24px; /* 活躍狀態變成長條 */
-            background-color: #6D5D55;
+            width: 24px;
+            background-color: var(--text-dark);
             border-radius: 4px;
         }
 
@@ -157,31 +180,31 @@
         .next-btn {
             width: 100%;
             height: 65px;
-            background-color: #D7BDB0;
+            background-color: var(--primary);
             color: white;
             border: none;
             border-radius: 20px;
-            font-size: 28px;
+            font-size: 32px;
             cursor: pointer;
-            transition: all 0.3s;
-            margin-top: auto; 
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* 加入彈性動畫曲線 */
             margin-bottom: 20px;
-            opacity: 0.4;
-            pointer-events: none;
+            opacity: 0.3;
+            pointer-events: none; /* 未選擇時禁止點擊 */
             display: flex;
             justify-content: center;
             align-items: center;
+            transform: scale(0.95);
         }
 
         .next-btn.active {
             opacity: 1;
             pointer-events: all;
-            box-shadow: 0 5px 15px rgba(215, 189, 176, 0.6);
-            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(215, 189, 176, 0.6);
+            transform: scale(1);
         }
 
         .next-btn:active {
-            transform: scale(0.98);
+            transform: scale(0.95);
         }
 
         /* --- 底部 Home Indicator --- */
@@ -191,16 +214,17 @@
             background-color: #000;
             border-radius: 3px;
             margin: 0 auto 10px auto;
+            opacity: 0.2;
         }
 
         /* --- 動畫 --- */
         .fade-in {
-            animation: fadeIn 0.4s ease-out forwards;
+            animation: fadeIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
     </style>
@@ -247,12 +271,13 @@
             { left: "葷食", right: "素食" },
             { left: "中式", right: "美式" },
             { left: "清淡", right: "重口味" },
-            { left: "餐廳", right: "街頭美食" },
+            { left: "餐廳", right: "街頭小吃" }, // 修正：街頭美食 -> 街頭小吃 (更通俗)
             { left: "獨享", right: "多人分享" }
         ];
 
         let currentStep = 0;
         let selectedValue = null;
+        let preferences = {}; // 用來儲存使用者的選擇
 
         // DOM 元素
         const textLeft = document.getElementById('textLeft');
@@ -262,10 +287,11 @@
         const nextBtn = document.getElementById('nextBtn');
         const optionsContainer = document.getElementById('optionsContainer');
         const progressDotsContainer = document.getElementById('progressDots');
+        const title = document.getElementById('questionTitle');
 
         // 初始化進度點
         function initDots() {
-            progressDotsContainer.innerHTML = ''; // 清空
+            progressDotsContainer.innerHTML = ''; 
             for (let i = 0; i < steps.length; i++) {
                 const dot = document.createElement('div');
                 dot.classList.add('dot');
@@ -276,14 +302,21 @@
 
         // 更新畫面
         function renderStep() {
-            // 動畫重置
+            // 動畫重置技巧
             optionsContainer.classList.remove('fade-in');
-            void optionsContainer.offsetWidth; // 觸發 Reflow
+            void optionsContainer.offsetWidth; // 強制瀏覽器重繪 (Reflow)
             optionsContainer.classList.add('fade-in');
 
             // 文字更新
             textLeft.innerText = steps[currentStep].left;
             textRight.innerText = steps[currentStep].right;
+            
+            // 根據進度微調標題 (可選)
+            if (currentStep === steps.length - 1) {
+                title.innerHTML = "Last One!";
+            } else {
+                title.innerHTML = "Make us KNOW<br>you more";
+            }
 
             // 狀態重置
             optionLeft.classList.remove('selected');
@@ -301,6 +334,7 @@
 
         // 選擇邏輯
         function selectOption(side) {
+            // 如果重複點擊已選中的，可以選擇取消 (這裡採取維持選中)
             selectedValue = side;
 
             if (side === 'left') {
@@ -318,16 +352,29 @@
         nextBtn.addEventListener('click', function() {
             if (!selectedValue) return;
 
-            // 這裡可以加入儲存邏輯 (例如存到 localStorage 或 變數)
-            console.log(`Step ${currentStep+1}: ${steps[currentStep][selectedValue]}`);
+            // 儲存資料
+            preferences[`step_${currentStep + 1}`] = steps[currentStep][selectedValue];
+            console.log("Current Prefs:", preferences);
 
             if (currentStep < steps.length - 1) {
                 currentStep++;
-                renderStep();
+                // 加入一點延遲讓按鈕動畫跑完
+                setTimeout(renderStep, 150);
             } else {
-                // 最後一步完成後的動作
-                // alert("偏好設定完成！");
-                window.location.href = "home.html"; // 跳轉首頁
+                // 完成後的動作
+                console.log("Final Selection:", preferences);
+                
+                // 為了演示效果，這裡做一個安全跳轉
+                // 實際專案中，這裡通常會是用 fetch/axios 將資料傳給後端
+                const jsonString = JSON.stringify(preferences, null, 2);
+                alert(`偏好設定完成！\n您的選擇：\n${jsonString}`);
+                
+                try {
+                    // 如果是在實際網站上
+                    // window.location.href = "home.html";
+                } catch (e) {
+                    console.error("Redirect failed");
+                }
             }
         });
 
