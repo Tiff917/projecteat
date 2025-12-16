@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Preference Selection</title>
+    <title>User Profile</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <style>
-        /* 莫蘭迪配色方案 */
+        /* --- 核心變數：完全依照截圖配色 --- */
         :root {
-            --primary: #D7BDB0;      /* 暖粉棕 */
-            --bg-global: #E3D5CA;    /* 米膚色 */
-            --bg-phone: #F5EBE1;     /* 奶油色 */
-            --inactive: #D6CCC2;     /* 暖灰色 */
-            --text-dark: #6D5D55;    /* 深暖棕 */
-            --text-light: #FFFFFF;
+            --bg-body: #EFE8E0;      /* 網頁背景 (稍微深一點區隔) */
+            --bg-phone: #F3EFE9;     /* 手機畫面背景 (燕麥米色) */
+            --text-primary: #8B7D74; /* 主文字 (暖深棕) */
+            --text-secondary: #A69890; /* 次要文字 */
+            --btn-bg: #C5B6AA;       /* 按鈕背景 (奶茶色) */
+            --btn-text: #FFFFFF;     /* 按鈕文字 */
+            --icon-color: #8B7D74;   /* 圖示顏色 */
         }
 
         * {
@@ -21,210 +22,193 @@
             padding: 0;
             box-sizing: border-box;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent; /* 移除手機點擊藍色高亮 */
-            user-select: none; /* 防止文字被選取 */
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background-color: var(--bg-global); 
+            background-color: var(--bg-body);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            /* 避免手機瀏覽器網址列導致的高度跳動 */
-            height: 100dvh; 
+            height: 100dvh;
         }
 
+        /* --- 手機外框容器 --- */
         .phone-container {
-            /* RWD 修正：寬度改為百分比，最大寬度限制為 375px */
             width: 100%;
             max-width: 375px;
             height: 100%;
-            max-height: 812px; /* 模擬 iPhone X 高度 */
-            
+            max-height: 812px;
             background-color: var(--bg-phone);
-            box-shadow: 0 20px 40px rgba(100, 80, 70, 0.15);
             position: relative;
-            padding: 20px 30px;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            box-shadow: 0 20px 40px rgba(100, 90, 80, 0.15);
         }
 
-        /* 如果是在桌面瀏覽，加上圓角和邊框模擬手機 */
+        /* 電腦版時的圓角與邊框模擬 */
         @media (min-width: 400px) {
             .phone-container {
                 height: 762px;
                 border-radius: 40px;
-                border: 8px solid #333;
+                border: 8px solid #2b2b2b;
             }
         }
 
-        /* --- 頂部區域 --- */
+        /* --- 頂部狀態列 (Status Bar) --- */
         .status-bar {
+            padding: 14px 20px 0 20px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
             font-size: 14px;
             font-weight: 600;
             color: #000;
-            margin-top: 5px;
-            margin-bottom: 20px;
-            padding: 0 10px;
-            z-index: 20;
+            height: 44px;
+            z-index: 10;
         }
 
         .notch {
-            width: 120px;
-            height: 30px;
-            background-color: #000;
-            border-radius: 0 0 15px 15px;
             position: absolute;
             top: 0;
             left: 50%;
             transform: translateX(-50%);
+            width: 120px;
+            height: 30px;
+            background-color: #000;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
             z-index: 20;
         }
 
-        /* --- 標題區域 --- */
-        .header {
-            text-align: center;
-            margin-top: 40px;
-            margin-bottom: 40px; 
-            min-height: 80px; 
+        /* --- 頂部導航區 (Back Button) --- */
+        .nav-header {
+            padding: 10px 20px;
             display: flex;
             align-items: center;
-            justify-content: center;
         }
 
-        .header h1 {
-            font-size: 26px;
+        .back-btn {
+            width: 36px;
+            height: 36px;
+            background-color: rgba(0,0,0,0.05); /* 淡淡的背景 */
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 20px;
+            transition: background 0.2s;
+        }
+        
+        .back-btn:active {
+            background-color: rgba(0,0,0,0.1);
+        }
+
+        /* --- 個人資訊區域 (Profile Header) --- */
+        .profile-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+            margin-bottom: 40px;
+        }
+
+        .avatar {
+            width: 100px;
+            height: 100px;
+            background-color: #F5F5F5; /* 更亮的白色圓圈 */
+            border-radius: 50%;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .user-name {
+            font-size: 22px;
             font-weight: 600;
-            line-height: 1.4;
-            color: var(--text-dark); 
+            color: var(--text-primary);
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .user-email {
+            font-size: 14px;
+            color: var(--text-primary);
+            opacity: 0.7;
+            font-weight: 400;
+        }
+
+        /* --- 選單列表 (Menu List) --- */
+        .menu-list {
+            padding: 0 40px; /* 左右留白，讓列表集中 */
+            flex: 1; /* 佔據剩餘空間 */
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 18px 0;
+            cursor: pointer;
+            color: var(--text-primary);
+            transition: opacity 0.2s;
+        }
+
+        .menu-item:active {
+            opacity: 0.6;
+        }
+
+        .menu-item i {
+            font-size: 22px;
+            margin-right: 20px; /* 圖示與文字的距離 */
+            color: var(--icon-color);
+        }
+
+        .menu-item span {
+            font-size: 17px;
+            font-weight: 500;
             letter-spacing: 0.5px;
         }
 
-        /* --- 選項卡片區域 --- */
-        .options-container {
-            display: flex;
-            gap: 20px;
-            height: 250px;
-            margin-bottom: 30px;
-            perspective: 1000px; /* 為動畫做準備 */
-        }
-
-        .option-box {
-            flex: 1;
-            background-color: var(--inactive); 
-            border-radius: 24px;
+        /* --- 登出按鈕 (Logout) --- */
+        .logout-container {
+            padding: 20px 30px 40px 30px;
             display: flex;
             justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-            position: relative;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            text-align: center;
-            padding: 10px;
         }
 
-        .option-box span {
-            font-size: 22px;
-            font-weight: 600;
-            color: var(--text-dark);
-            letter-spacing: 1px;
-            transition: color 0.2s;
-        }
-
-        /* 選中狀態 */
-        .option-box.selected {
-            background-color: var(--primary); 
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(215, 189, 176, 0.5);
-        }
-        
-        .option-box.selected span {
-            color: var(--text-light); 
-        }
-
-        /* 按下時的縮放效果 (UX 優化) */
-        .option-box:active {
-            transform: scale(0.96) translateY(-2px);
-        }
-
-        /* --- 進度指示點 --- */
-        .progress-dots {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: auto; /* 將按鈕推到底部 */
-            padding-bottom: 20px;
-            align-items: center;
-        }
-
-        .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: var(--inactive);
-            transition: all 0.3s ease;
-        }
-
-        .dot.active {
-            width: 24px;
-            background-color: var(--text-dark);
-            border-radius: 4px;
-        }
-
-        /* --- 下一步按鈕 --- */
-        .next-btn {
+        .logout-btn {
             width: 100%;
-            height: 65px;
-            background-color: var(--primary);
-            color: white;
+            height: 55px;
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
             border: none;
-            border-radius: 20px;
-            font-size: 32px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 500;
+            letter-spacing: 1px;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* 加入彈性動畫曲線 */
-            margin-bottom: 20px;
-            opacity: 0.3;
-            pointer-events: none; /* 未選擇時禁止點擊 */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transform: scale(0.95);
+            box-shadow: 0 4px 10px rgba(197, 182, 170, 0.4);
+            transition: transform 0.1s;
         }
 
-        .next-btn.active {
-            opacity: 1;
-            pointer-events: all;
-            box-shadow: 0 8px 20px rgba(215, 189, 176, 0.6);
-            transform: scale(1);
+        .logout-btn:active {
+            transform: scale(0.98);
         }
 
-        .next-btn:active {
-            transform: scale(0.95);
-        }
-
-        /* --- 底部 Home Indicator --- */
+        /* --- 底部橫條 --- */
         .home-indicator {
             width: 130px;
             height: 5px;
             background-color: #000;
             border-radius: 3px;
-            margin: 0 auto 10px auto;
-            opacity: 0.2;
-        }
-
-        /* --- 動畫 --- */
-        .fade-in {
-            animation: fadeIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0.8;
         }
 
     </style>
@@ -233,154 +217,60 @@
 
     <div class="phone-container">
         <div class="notch"></div>
-        <div class="status-bar">
-            <span>9:41</span>
-            <div style="display: flex; gap: 5px;">
-                <i class='bx bx-signal-4'></i>
-                <i class='bx bx-wifi'></i>
-                <i class='bx bxs-battery-full'></i>
-            </div>
-        </div>
-
-        <div class="header">
-            <h1 id="questionTitle">Make us KNOW<br>you more</h1>
-        </div>
-
-        <div class="options-container" id="optionsContainer">
-            <div class="option-box" id="optionLeft" onclick="selectOption('left')">
-                <span id="textLeft">Option A</span>
-            </div>
-            <div class="option-box" id="optionRight" onclick="selectOption('right')">
-                <span id="textRight">Option B</span>
-            </div>
-        </div>
-
-        <div class="progress-dots" id="progressDots"></div>
-
-        <button class="next-btn" id="nextBtn">
-            <i class='bx bx-check'></i>
-        </button>
         
+        <div class="status-bar">
+            <span style="margin-left: 10px;">9:41</span>
+            <div style="display: flex; gap: 6px; margin-right: 10px;">
+                <i class='bx bx-signal-5'></i>
+                <i class='bx bx-wifi'></i>
+                <i class='bx bxs-battery'></i>
+            </div>
+        </div>
+
+        <div class="nav-header">
+            <div class="back-btn">
+                <i class='bx bx-chevron-left'></i>
+            </div>
+        </div>
+
+        <div class="profile-section">
+            <div class="avatar"></div> <h2 class="user-name">TTTTT</h2>
+            <p class="user-email">YYYT.gmail.com</p>
+        </div>
+
+        <div class="menu-list">
+            <div class="menu-item">
+                <i class='bx bx-user'></i>
+                <span>My Profile</span>
+            </div>
+            <div class="menu-item">
+                <i class='bx bx-bell'></i>
+                <span>Subscription</span>
+            </div>
+            <div class="menu-item">
+                <i class='bx bx-map'></i>
+                <span>Address</span>
+            </div>
+            <div class="menu-item">
+                <i class='bx bx-envelope'></i>
+                <span>Contact Us</span>
+            </div>
+            <div class="menu-item">
+                <i class='bx bx-cog'></i>
+                <span>Setting</span>
+            </div>
+            <div class="menu-item">
+                <i class='bx bx-help-circle'></i>
+                <span>Help&QA</span>
+            </div>
+        </div>
+
+        <div class="logout-container">
+            <button class="logout-btn">Log Out</button>
+        </div>
+
         <div class="home-indicator"></div>
     </div>
 
-    <script>
-        // 資料設定
-        const steps = [
-            { left: "飯", right: "麵" },
-            { left: "葷食", right: "素食" },
-            { left: "中式", right: "美式" },
-            { left: "清淡", right: "重口味" },
-            { left: "餐廳", right: "街頭小吃" }, // 修正：街頭美食 -> 街頭小吃 (更通俗)
-            { left: "獨享", right: "多人分享" }
-        ];
-
-        let currentStep = 0;
-        let selectedValue = null;
-        let preferences = {}; // 用來儲存使用者的選擇
-
-        // DOM 元素
-        const textLeft = document.getElementById('textLeft');
-        const textRight = document.getElementById('textRight');
-        const optionLeft = document.getElementById('optionLeft');
-        const optionRight = document.getElementById('optionRight');
-        const nextBtn = document.getElementById('nextBtn');
-        const optionsContainer = document.getElementById('optionsContainer');
-        const progressDotsContainer = document.getElementById('progressDots');
-        const title = document.getElementById('questionTitle');
-
-        // 初始化進度點
-        function initDots() {
-            progressDotsContainer.innerHTML = ''; 
-            for (let i = 0; i < steps.length; i++) {
-                const dot = document.createElement('div');
-                dot.classList.add('dot');
-                if (i === 0) dot.classList.add('active');
-                progressDotsContainer.appendChild(dot);
-            }
-        }
-
-        // 更新畫面
-        function renderStep() {
-            // 動畫重置技巧
-            optionsContainer.classList.remove('fade-in');
-            void optionsContainer.offsetWidth; // 強制瀏覽器重繪 (Reflow)
-            optionsContainer.classList.add('fade-in');
-
-            // 文字更新
-            textLeft.innerText = steps[currentStep].left;
-            textRight.innerText = steps[currentStep].right;
-            
-            // 根據進度微調標題 (可選)
-            if (currentStep === steps.length - 1) {
-                title.innerHTML = "Last One!";
-            } else {
-                title.innerHTML = "Make us KNOW<br>you more";
-            }
-
-            // 狀態重置
-            optionLeft.classList.remove('selected');
-            optionRight.classList.remove('selected');
-            selectedValue = null;
-            nextBtn.classList.remove('active');
-
-            // 更新進度點樣式
-            const dots = document.querySelectorAll('.dot');
-            dots.forEach((dot, index) => {
-                if (index === currentStep) dot.classList.add('active');
-                else dot.classList.remove('active');
-            });
-        }
-
-        // 選擇邏輯
-        function selectOption(side) {
-            // 如果重複點擊已選中的，可以選擇取消 (這裡採取維持選中)
-            selectedValue = side;
-
-            if (side === 'left') {
-                optionLeft.classList.add('selected');
-                optionRight.classList.remove('selected');
-            } else {
-                optionRight.classList.add('selected');
-                optionLeft.classList.remove('selected');
-            }
-
-            nextBtn.classList.add('active');
-        }
-
-        // 按鈕點擊事件
-        nextBtn.addEventListener('click', function() {
-            if (!selectedValue) return;
-
-            // 儲存資料
-            preferences[`step_${currentStep + 1}`] = steps[currentStep][selectedValue];
-            console.log("Current Prefs:", preferences);
-
-            if (currentStep < steps.length - 1) {
-                currentStep++;
-                // 加入一點延遲讓按鈕動畫跑完
-                setTimeout(renderStep, 150);
-            } else {
-                // 完成後的動作
-                console.log("Final Selection:", preferences);
-                
-                // 為了演示效果，這裡做一個安全跳轉
-                // 實際專案中，這裡通常會是用 fetch/axios 將資料傳給後端
-                const jsonString = JSON.stringify(preferences, null, 2);
-                alert(`偏好設定完成！\n您的選擇：\n${jsonString}`);
-                
-                try {
-                    // 如果是在實際網站上
-                    // window.location.href = "home.html";
-                } catch (e) {
-                    console.error("Redirect failed");
-                }
-            }
-        });
-
-        // 啟動
-        initDots();
-        renderStep();
-    </script>
 </body>
 </html>
