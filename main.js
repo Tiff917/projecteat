@@ -628,9 +628,57 @@ function updateCarousel() {
     if(bottomBar) bottomBar.style.opacity = isHome ? 1 : 0;
 }
 
+// ==========================================
+// 7. 登入、登出與個人頁面邏輯 (放在檔案最下方)
+// ==========================================
+
+// 1. 登入邏輯
+const loginPage = document.getElementById('loginPage');
+const loginBtn = document.getElementById('loginBtn');
+
+// 檢查是否已登入 (讀取 localStorage)
+if (localStorage.getItem('isLoggedIn') === 'true') {
+    if(loginPage) loginPage.classList.add('hidden'); // 如果已登入，隱藏登入頁
+}
+
+if (loginBtn) {
+    loginBtn.addEventListener('click', () => {
+        // 執行登入
+        localStorage.setItem('isLoggedIn', 'true');
+        if(loginPage) loginPage.classList.add('hidden'); // 滑走登入頁
+    });
+}
+
+// 2. 登出邏輯
+const logoutBtn = document.querySelector('.logout-btn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+        // 清除登入狀態
+        localStorage.removeItem('isLoggedIn');
+        
+        // 關閉個人頁面
+        const profilePage = document.getElementById('profilePage');
+        if(profilePage) profilePage.classList.remove('active');
+        
+        // 顯示登入頁面 (把 hidden 拿掉)
+        if(loginPage) loginPage.classList.remove('hidden');
+    });
+}
+
+// 3. Subscription 按鈕點擊 (確保能夠觸發)
+const subBtn = document.getElementById('subscriptionBtn');
+if (subBtn) {
+    subBtn.onclick = () => {
+        if(isVIP) {
+            alert("您已經是尊榮 Premium 會員！");
+        } else {
+            // 關閉個人頁，打開付款頁
+            document.getElementById('profilePage').classList.remove('active');
+            document.getElementById('paymentModal').classList.add('active');
+        }
+    };
+}
+
+// 4. 個人頁面開關 (與上方整合)
 if(document.getElementById('openProfileBtn')) document.getElementById('openProfileBtn').addEventListener('click', () => document.getElementById('profilePage').classList.add('active'));
 if(document.getElementById('closeProfileBtn')) document.getElementById('closeProfileBtn').addEventListener('click', () => document.getElementById('profilePage').classList.remove('active'));
-if(document.querySelector('.logout-btn')) document.querySelector('.logout-btn').addEventListener('click', () => {
-    localStorage.removeItem('isVIP');
-    window.location.reload();
-});
