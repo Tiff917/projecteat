@@ -6,39 +6,66 @@
     <title>Login - Gourmet App</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <style>
-        /* CSS 重置 */
+        /* 1. 基礎設定 */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
         body {
-            /* 背景色：米膚色 */
-            background-color: #E3D5CA; 
+            background-color: #E3D5CA; /* 電腦版背景色 (深米色) */
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            /* ⚠️ 電腦版保留一點間距，但在手機版我們會拿掉 */
+            padding: 20px; 
         }
 
-        /* 登入卡片 (RWD 核心) */
+        /* 2. 登入卡片 (RWD 核心) */
         .login-card {
             width: 100%;
             max-width: 400px; /* 電腦版最大寬度 */
             background-color: #F5EBE1; /* 奶油色底 */
             border-radius: 30px;
             padding: 40px 30px;
-            box-shadow: 0 15px 35px rgba(109, 93, 85, 0.15); /* 柔和陰影 */
+            box-shadow: 0 15px 35px rgba(109, 93, 85, 0.15); /* 陰影 */
             display: flex;
             flex-direction: column;
             align-items: center;
+            transition: all 0.3s ease;
         }
 
-        /* 標題區域 */
+        /* 🔥🔥 手機版強制滿版 (關鍵修正) 🔥🔥 */
+        @media screen and (max-width: 480px) {
+            body {
+                padding: 0; /* 移除外圍間距 */
+                background-color: #F5EBE1; /* 背景色改成跟卡片一樣，避免滑動露餡 */
+                align-items: flex-start; /* 內容從頂部開始，避免鍵盤彈起時跑版 */
+            }
+            .login-card {
+                max-width: 100%;
+                height: 100vh; /* 強制滿高 */
+                border-radius: 0; /* 移除圓角 */
+                box-shadow: none; /* 移除陰影 */
+                justify-content: center; /* 內容垂直置中 */
+            }
+        }
+
+        /* 3. LOGO 與標題 */
+        .login-logo {
+            width: 100px; height: 100px;
+            background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80');
+            background-size: cover; background-position: center;
+            border-radius: 28px; margin-bottom: 20px;
+            box-shadow: 0 8px 20px rgba(141, 110, 99, 0.2);
+        }
+
         .header { text-align: center; margin-bottom: 40px; width: 100%; }
         .header h1 {
-            font-size: 28px; font-weight: 600; line-height: 1.3; color: #6D5D55;
+            font-size: 26px; font-weight: 700; line-height: 1.3; color: #6D5D55;
+            margin-bottom: 5px;
         }
+        .header p { font-size: 14px; color: #9c8e87; }
 
-        /* 表單區域 */
+        /* 4. 表單區域 */
         .form-group { width: 100%; display: flex; flex-direction: column; gap: 15px; }
 
         /* 輸入框樣式 */
@@ -59,7 +86,7 @@
         }
         .input-wrapper input::placeholder { color: #bbafa9; }
 
-        /* 忘記密碼 */
+        /* 5. 忘記密碼 */
         .forgot-password {
             width: 100%; text-align: right; margin-top: 10px; margin-bottom: 30px;
         }
@@ -68,7 +95,7 @@
         }
         .forgot-password a:hover { color: #6D5D55; }
 
-        /* 登入按鈕 */
+        /* 6. 登入按鈕 */
         .login-btn {
             width: 100%; padding: 16px;
             background-color: #D7BDB0; /* 暖粉棕 */
@@ -79,7 +106,7 @@
         }
         .login-btn:active { transform: scale(0.98); background-color: #c4a89a; }
 
-        /* 底部註冊 */
+        /* 7. 底部註冊 */
         .footer { margin-top: 30px; font-size: 13px; color: #9c8e87; }
         .footer a { text-decoration: none; color: #6D5D55; font-weight: bold; }
 
@@ -89,8 +116,11 @@
 
     <div class="login-card">
         
+        <div class="login-logo"></div>
+
         <div class="header">
-            <h1>Make a memory<br>with us</h1>
+            <h1>Gourmet App</h1>
+            <p>Share your delicious moments</p>
         </div>
 
         <div class="form-group">
@@ -107,7 +137,7 @@
         </div>
 
         <div class="forgot-password">
-            <a href="#">Forgot password?</a>
+            <a href="forgot-password.html">Forgot password?</a>
         </div>
 
         <button class="login-btn" id="loginBtn">Log in</button>
@@ -119,7 +149,6 @@
     </div>
 
     <script>
-        // 邏輯部分保持不變
         const togglePassword = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('passwordInput');
         const emailInput = document.getElementById('emailInput');
@@ -156,7 +185,7 @@
             if (isValid) {
                 // 寫入狀態並跳轉
                 localStorage.setItem('isLoggedIn', 'true');
-                window.location.href = "home.html"; // 確保這裡是您的主頁檔名
+                window.location.href = "home.html"; // 跳轉到主頁
             }
         });
 
