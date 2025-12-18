@@ -1,271 +1,196 @@
 /* =========================================
-   1. 全局設定 (Reset & Layout)
+   1. 全局設定 (Reset & Variables)
    ========================================= */
 * {
     margin: 0;
     padding: 0;
-    box-sizing: border-box; /* 關鍵：讓邊框不影響寬度計算 */
+    box-sizing: border-box;
+    user-select: none;
     -webkit-tap-highlight-color: transparent;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    user-select: none;
 }
 
 :root {
-    --bg-color: #F2EBE0; /* 背景米色 */
-    --card-bg: #F5EBE1;  /* 卡片奶油色 */
-    --primary-brown: #8D6E63; /* 主色調 */
+    --bg-color: #F2EBE0;       
+    --primary-brown: #8D6E63;  
     --text-dark: #5D4037;
+    /* 定義卡片大小：螢幕寬的 85%，但最大不超過 400px */
+    --card-size: min(85vw, 400px); 
 }
 
 body {
-    background-color: #E3D5CA; /* 外圍背景深一點 */
+    background-color: var(--bg-color);
     width: 100vw;
     height: 100vh;
-    overflow: hidden; /* 禁止整個網頁出現捲軸 */
+    overflow: hidden; /* 禁止瀏覽器預設捲動 */
+    position: fixed; /* 鎖定畫面 */
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
 /* =========================================
-   2. 滑動軌道 (Carousel Track) - 核心結構
+   2. 滑動軌道 (Carousel Track)
    ========================================= */
 .carousel-track {
     display: flex;
-    width: 300vw; /* 總寬度是 3 個螢幕 */
+    width: 300%; /* 三個頁面寬 */
     height: 100%;
-    will-change: transform;
-    /* 預設停在第 2 頁 (主頁) -> -100vw */
-    transform: translateX(-33.3333%); 
+    transform: translateX(-33.333%); /* 初始位置在中間 */
+    will-change: transform; /* 效能優化 */
 }
 
 .page-container {
-    width: 100vw; /* 每一頁剛好 1 個螢幕寬 */
-    height: 100vh;
-    overflow: hidden;
+    width: 33.333%; 
+    height: 100%;
+    flex-shrink: 0;
     position: relative;
-    flex-shrink: 0; /* 禁止被擠壓 */
-    
-    /* 讓內部內容置中 (針對主頁卡片) */
-    display: flex;
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
     justify-content: center;
-    align-items: center;
+    overflow-y: hidden; /* 預設隱藏捲動 */
 }
 
 /* 頁面特定調整 */
 #page-memory {
-    background-color: var(--card-bg);
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start; /* 回憶頁從上排下來 */
-    padding-top: 80px; 
-    padding-bottom: 100px;
+    justify-content: flex-start;
+    padding-top: 100px;
+    overflow-y: auto; /* 允許捲動 */
 }
 
 #page-community {
     background-color: #fff;
-    display: block; /* 社群頁不需要 Flex 置中 */
+    display: block;
+    overflow-y: hidden; /* 內部自己捲動 */
 }
 
+/* 用於外部載入內容的包覆層 */
 .page-content-wrapper {
     width: 100%; height: 100%;
     display: flex; flex-direction: column;
     background-color: var(--bg-color);
 }
 
+.loading-text { color: #aaa; font-size: 14px; margin-top: 20px; }
+
 /* =========================================
-   3. 主頁面 (Home - Card)
+   3. 主頁面 (Home Card)
    ========================================= */
 .card {
-    width: 100%;
-    max-width: 375px; /* 手機寬度限制 */
-    height: 75vh;     /* 高度限制 */
-    background-color: var(--card-bg);
-    border-radius: 40px;
-    box-shadow: 0 20px 50px rgba(109, 93, 85, 0.2);
-    position: relative;
-    overflow: hidden;
+    /* 讓寬高都吃變數 */
+    width: var(--card-size);
+    height: var(--card-size); /* 確保是正方形 */
+    aspect-ratio: 1 / 1;
     
-    /* 背景圖設定 */
-    background-size: cover;
+    background-color: #ddd; 
+    border-radius: 35px;
+    /* 預設背景圖 */
+    background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80');
+    background-size: cover; 
     background-position: center;
-    background-repeat: no-repeat;
-    /* 預設背景 */
-    background-image: url('https://images.unsplash.com/photo-1542372377-2a420952da8e?w=600&q=80'); 
-    
-    transition: transform 0.3s;
+    box-shadow: 0 15px 30px rgba(93, 64, 55, 0.15);
+    position: relative; 
+    overflow: hidden;
+    margin: 0 auto;
+    flex-shrink: 0;
+    z-index: 5;
 }
 
 .card::before {
     content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(30, 30, 30, 0.3); /* 輕微遮罩讓字清楚 */
-    z-index: 1;
-    pointer-events: none;
+    background-color: rgba(30, 30, 30, 0.3); z-index: 2; pointer-events: none;
 }
 
 .date-display {
-    position: absolute;
-    top: 30px; left: 30px;
-    font-size: 16px; font-weight: 600;
-    color: var(--text-dark);
-    background-color: rgba(255, 255, 255, 0.85);
-    padding: 6px 14px;
-    border-radius: 20px;
-    backdrop-filter: blur(5px);
-    z-index: 2;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    position: absolute; top: 30px; left: 30px;
+    font-size: 16px; font-weight: 600; color: #5D4037;
+    background-color: rgba(255, 255, 255, 0.7);
+    padding: 6px 14px; border-radius: 20px;
+    backdrop-filter: blur(5px); z-index: 3;
 }
 
 /* =========================================
-   4. 回憶頁面 (Memory - Calendar)
+   4. UI 元件 (Bars) - 鎖定卡片位置
    ========================================= */
-.calendar-wrapper {
-    width: 100%;
-    max-width: 375px;
-    margin: 0 auto;
-    padding: 0 20px;
-    height: 100%;
-    overflow-y: auto; /* 只有這裡可以捲動 */
+.top-bar, .bottom-bar {
+    position: fixed; 
+    width: var(--card-size); /* 寬度跟卡片一樣 */
+    left: 50%; top: 50%; bottom: auto; /* 定位在中心 */
+    display: flex; align-items: center;
+    padding: 0 5px; /* 左右內縮 */
+    z-index: 100; pointer-events: none;
+    transition: opacity 0.3s;
 }
 
-.calendar-controls {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 20px; color: var(--text-dark); font-weight: bold; font-size: 18px;
+.top-bar { 
+    justify-content: space-between;
+    /* 往上移動：(卡片一半高度) + (30px 間距) */
+    margin-top: calc( (var(--card-size) / -2) - 50px );
+    transform: translate(-50%, -100%);
 }
 
-.month-nav-btn {
-    background: none; border: none; font-size: 20px; color: var(--primary-brown);
-    cursor: pointer; padding: 10px;
+.bottom-bar { 
+    justify-content: center; gap: 60px;
+    /* 往下移動：(卡片一半高度) + (30px 間距) */
+    margin-top: calc( (var(--card-size) / 2) + 30px );
+    transform: translate(-50%, 0);
 }
 
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 10px;
-}
-
-.day-cell {
-    aspect-ratio: 1; /* 正方形 */
-    border-radius: 12px;
-    background-color: #fff;
-    display: flex; justify-content: center; align-items: center;
-    font-size: 14px; color: #ccc;
-    position: relative;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-.day-cell.has-photo {
-    background-size: cover; background-position: center;
-    color: transparent; cursor: pointer;
-    border: 2px solid #fff;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-/* =========================================
-   5. 社群頁面 (Community - IG Style)
-   ========================================= */
-/* 標題欄 */
-.community-header {
-    padding: 20px 15px 10px 15px;
-    background-color: var(--bg-color);
-    z-index: 10;
-    position: sticky; top: 0;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-}
-
-/* 貼文列表容器 */
-#feedContainer {
-    flex: 1;
-    overflow-y: auto;
-    padding-bottom: 100px;
-    background-color: #fff;
-}
-
-/* 單篇貼文 */
-.feed-card {
-    background-color: transparent;
-    margin-bottom: 20px;
-    border-bottom: 1px solid rgba(141, 110, 99, 0.1);
-    padding-bottom: 15px;
-}
-
-.feed-header {
-    display: flex; align-items: center; justify-content: space-between; padding: 10px 15px;
-}
-.feed-user-info { display: flex; align-items: center; gap: 10px; }
-.feed-avatar { width: 36px; height: 36px; border-radius: 50%; background-color: #ddd; background-size: cover; border: 1px solid #eee; }
-.feed-username { font-size: 14px; font-weight: 700; color: #333; display: flex; align-items: center; gap: 5px; }
-.feed-location { font-size: 11px; color: #999; }
-
-/* 圖片輪播 */
-.feed-carousel {
-    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
-    width: 100%; height: 400px; /* 圖片高度 */
-    scrollbar-width: none; /* Firefox 隱藏捲軸 */
-}
-.feed-carousel::-webkit-scrollbar { display: none; } /* Chrome 隱藏捲軸 */
-
-.feed-image {
-    flex: 0 0 100%; height: 100%;
-    background-size: cover; background-position: center; background-color: #eee;
-    scroll-snap-align: start;
-}
-
-.feed-counter {
-    position: absolute; top: 15px; right: 15px;
-    background: rgba(0,0,0,0.6); color: white;
-    padding: 4px 10px; border-radius: 12px; font-size: 12px;
-}
-
-/* 互動區 */
-.feed-actions { padding: 10px 15px; display: flex; gap: 15px; }
-.action-icon {
-    width: 26px; height: 26px; cursor: pointer; fill: none; stroke: #333; stroke-width: 2;
+.btn-container {
+    width: 44px; height: 44px; 
+    background-color: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px);
+    border-radius: 50%; display: flex; justify-content: center; align-items: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); pointer-events: auto; cursor: pointer;
     transition: transform 0.1s;
 }
+.btn-container:active { transform: scale(0.92); }
+
+.avatar, .notification { width: 55px; height: 55px; background-color: #947867; border-radius: 50%; }
+.search-pill { width: 120px; height: 45px; background-color: #947867; border-radius: 22px; padding-left: 15px; margin: 0 auto; justify-content: flex-start; }
+.shutter-btn { width: 76px; height: 76px; border: 5px solid #F2EBE0; background-color: #947867; border-radius: 50%; box-shadow: 0 0 0 4px #947867 inset; }
+
+/* SVG Icon */
+svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.icon-white svg { stroke: white; stroke-width: 2; }
+.icon-brown svg { stroke: #8D6E63; stroke-width: 2.5; width: 32px; height: 32px; }
+
+/* =========================================
+   5. 回憶頁面 (Calendar)
+   ========================================= */
+.calendar-container { width: 90%; max-width: 350px; margin: 0 auto; }
+.weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 15px; }
+.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; row-gap: 20px; }
+.day-cell { width: 100%; aspect-ratio: 1/1; display: flex; justify-content: center; align-items: center; font-size: 16px; color: #9E9E9E; border-radius: 50%; cursor: pointer; position: relative; }
+.day-cell.has-photo { background-size: cover; background-position: center; color: transparent; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+.calendar-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: var(--text-dark); font-weight: bold; }
+.month-nav-btn { background: none; border: none; font-size: 20px; color: var(--primary-brown); cursor: pointer; padding: 10px; }
+
+/* =========================================
+   6. 社群頁面 (Community - IG Style)
+   ========================================= */
+#feedContainer { flex: 1; overflow-y: auto; padding-bottom: 100px; background-color: #fff; }
+.feed-card { background-color: transparent; margin-bottom: 20px; border-bottom: 1px solid rgba(141, 110, 99, 0.1); padding-bottom: 15px; }
+.feed-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; }
+.feed-user-info { display: flex; align-items: center; gap: 10px; }
+.feed-avatar { width: 36px; height: 36px; border-radius: 50%; background-color: #ddd; background-size: cover; border: 1px solid #eee; }
+.feed-username { font-size: 14px; font-weight: 700; color: #333; }
+.feed-location { font-size: 11px; color: #999; }
+.feed-carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; height: 400px; scrollbar-width: none; }
+.feed-carousel::-webkit-scrollbar { display: none; }
+.feed-image { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #eee; scroll-snap-align: start; }
+.feed-counter { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6); color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; }
+.feed-actions { padding: 10px 15px; display: flex; gap: 15px; }
+.action-icon { width: 26px; height: 26px; cursor: pointer; fill: none; stroke: #333; stroke-width: 2; transition: transform 0.1s; }
 .action-icon:active { transform: scale(0.9); }
 .action-icon.liked { fill: #ED4956; stroke: #ED4956; animation: likeBounce 0.3s; }
 @keyframes likeBounce { 0%{transform:scale(1);} 50%{transform:scale(1.2);} 100%{transform:scale(1);} }
-
 .feed-likes { padding: 0 15px; font-size: 14px; font-weight: 700; color: #333; margin-bottom: 5px; }
 .feed-caption { padding: 0 15px; font-size: 14px; color: #333; line-height: 1.4; }
-.caption-username { font-weight: 700; margin-right: 5px; }
 .view-comments { padding: 5px 15px; font-size: 13px; color: #999; margin-top: 5px; cursor: pointer; }
 
 /* =========================================
-   6. UI 元件 (Bars & Buttons)
-   ========================================= */
-.top-bar {
-    position: fixed; top: 0; left: 0; width: 100%; height: 80px;
-    display: flex; justify-content: space-between; align-items: flex-end;
-    padding: 0 25px 15px; z-index: 100; pointer-events: none;
-    transition: opacity 0.3s;
-}
-.btn-container {
-    width: 44px; height: 44px; background-color: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(10px); border-radius: 50%;
-    display: flex; justify-content: center; align-items: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); pointer-events: auto; cursor: pointer;
-}
-/* SVG Icon 顏色 */
-.icon-white svg { stroke: white; stroke-width: 2; }
-.icon-brown svg { stroke: var(--primary-brown); stroke-width: 2; width: 28px; height: 28px; }
-
-.bottom-bar {
-    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-    width: 320px; height: 70px; background-color: #fff;
-    border-radius: 35px; display: flex; justify-content: space-around; align-items: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); z-index: 100; transition: opacity 0.3s;
-}
-.shutter-btn {
-    width: 56px; height: 56px; border-radius: 50%;
-    background-color: var(--primary-brown); border: 4px solid #fff;
-    box-shadow: 0 5px 15px rgba(141, 110, 99, 0.4);
-    cursor: pointer;
-}
-
-/* =========================================
-   7. 彈出層 (Profile, Editor, Payment)
+   7. 全螢幕覆蓋層 (Popup Pages)
    ========================================= */
 .profile-page, .editor-page, .payment-modal, .action-sheet, .comment-sheet {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -273,7 +198,8 @@ body {
     transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     display: flex; flex-direction: column;
 }
-.active { transform: translateY(0) !important; }
+.profile-page { transform: translateX(-100%); z-index: 300; } /* Profile 是橫向滑入 */
+.active { transform: translateY(0) !important; transform: translateX(0) !important; }
 
 /* 背景遮罩 */
 .modal-backdrop {
@@ -282,70 +208,66 @@ body {
 }
 .modal-backdrop.active { opacity: 1; pointer-events: auto; }
 
-/* 個人頁面樣式 */
-.profile-page { z-index: 300; background-color: var(--bg-color); transform: translateX(-100%); }
-.profile-page.active { transform: translateX(0); }
-.back-btn {
-    position: absolute; top: 50px; left: 20px; width: 40px; height: 40px;
-    background-color: var(--primary-brown); border-radius: 50%;
-    display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 310;
-}
-.profile-header { padding-top: 100px; padding-bottom: 40px; display: flex; flex-direction: column; align-items: center; }
-.profile-avatar { width: 100px; height: 100px; background-color: #ddd; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-.profile-name { font-size: 24px; font-weight: bold; color: var(--text-dark); }
-.profile-email { font-size: 14px; color: var(--primary-brown); }
-.profile-menu { width: 85%; margin: 0 auto; flex: 1; }
-.menu-item { padding: 18px 0; border-bottom: 1px solid #E0D4C8; color: var(--text-dark); font-weight: 500; cursor: pointer; display: flex; align-items: center; }
-.logout-btn { margin: 20px auto 50px auto; background-color: #D7CCC8; color: var(--text-dark); border: none; padding: 12px 40px; border-radius: 25px; font-weight: bold; cursor: pointer; }
+/* --- 個人頁面細節 --- */
+.profile-page { padding: 20px 30px; }
+.back-btn { width: 40px; height: 40px; background-color: #D7CCC8; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; margin-bottom: 20px; }
+.profile-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 40px; }
+.profile-avatar { width: 100px; height: 100px; background-color: #fff; border-radius: 50%; margin-bottom: 15px; }
+.profile-name { font-size: 22px; font-weight: bold; color: var(--text-dark); }
+.profile-email { font-size: 14px; opacity: 0.6; margin-top: 5px; color: var(--text-dark); }
+.profile-menu { display: flex; flex-direction: column; gap: 20px; width: 100%; flex: 1; }
+.menu-item { font-size: 16px; color: var(--text-dark); font-weight: 500; cursor: pointer; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center; }
+.menu-item .vip-bell { margin-right: 10px; width: 24px; height: 24px; stroke: var(--primary-brown); }
+.menu-item .vip-bell.active { fill: #ED4956; stroke: #ED4956; }
+.logout-btn { width: 100%; height: 50px; background-color: #C1B0A4; color: white; border: none; border-radius: 15px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
 
-/* 編輯器樣式 */
-.editor-header { height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-top: 40px; }
-.header-btn { font-size: 16px; color: var(--text-dark); cursor: pointer; font-weight: 600; }
-.header-title { font-size: 18px; font-weight: bold; }
-.next-btn { color: var(--primary-brown); }
-.preview-area { width: 100%; height: 350px; background-color: #e0e0e0; background-size: cover; background-position: center; display: flex; justify-content: center; align-items: center; color: #999; }
-.editor-tools-bar { display: flex; gap: 10px; padding: 15px; background: #fff; }
-.tool-capsule { height: 36px; background: rgba(141, 110, 99, 0.1); border-radius: 18px; padding: 0 12px; display: flex; align-items: center; font-size: 13px; color: var(--text-dark); cursor: pointer; }
-.tool-capsule.active { background-color: var(--primary-brown); color: white; }
-.gallery-grid { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 2px; overflow-y: auto; background: white; }
-.gallery-item { aspect-ratio: 1; background-color: #eee; background-size: cover; cursor: pointer; }
-.gallery-add-btn { background-color: #f0f0f0; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 12px; color: #888; border: 1px dashed #ccc; }
+/* --- 編輯器細節 --- */
+.editor-page { z-index: 600; }
+.editor-header { height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-top: 10px; }
+.header-btn { font-size: 16px; font-weight: 500; color: var(--text-dark); cursor: pointer; }
+.header-title { font-weight: bold; font-size: 17px; }
+.preview-area { width: 100%; height: 45vh; background-color: #ddd; background-size: cover; background-position: center; }
+.editor-tools-bar { display: flex; align-items: center; padding: 10px 15px; background-color: var(--bg-color); gap: 10px; }
+.tool-capsule { height: 36px; background-color: rgba(93, 64, 55, 0.1); border-radius: 18px; display: flex; justify-content: center; align-items: center; padding: 0 12px; cursor: pointer; color: var(--text-dark); font-size: 13px; }
+.tool-capsule.right { margin-left: auto; background-color: rgba(93, 64, 55, 0.8); color: white; }
+.gallery-grid { flex: 1; background-color: #fff; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; overflow-y: auto; padding-top: 2px; }
+.gallery-item { width: 100%; aspect-ratio: 1/1; background-color: #eee; background-size: cover; cursor: pointer; }
+.gallery-add-btn { background-color: #e0e0e0; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: #555; font-size: 12px; }
 
-/* 付款視窗 */
-.payment-modal { z-index: 2000; background-color: #EFEBE9; }
-.payment-header { background-color: #D7CCC8; padding: 60px 20px 20px 20px; color: white; }
-.payment-price { font-size: 36px; font-weight: bold; margin-bottom: 20px; }
-.payment-form { padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 15px; }
-.input-group { background: white; padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-.input-label { font-size: 12px; color: var(--primary-brown); font-weight: bold; display: block; margin-bottom: 5px; }
-.input-field { width: 100%; border: none; outline: none; font-size: 16px; background: transparent; }
-.card-row { display: flex; gap: 10px; } .card-row .input-group { flex: 1; }
-.pay-btn { margin-top: auto; margin-bottom: 30px; background-color: #D7CCC8; color: white; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-.payment-close { position: absolute; top: 50px; right: 20px; color: white; font-size: 24px; cursor: pointer; }
-
-/* 動作選單 (Action Sheet) */
-.action-sheet { height: auto; border-radius: 35px 35px 0 0; padding: 10px 25px 40px 25px; z-index: 450; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); }
-.sheet-handle-area { width: 100%; height: 30px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; }
+/* --- Action Sheet --- */
+.action-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--bg-color); border-radius: 35px 35px 0 0; padding: 10px 25px 40px 25px; transform: translateY(100%); z-index: 450; transition: transform 0.3s; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); }
+.sheet-handle-area { width: 100%; height: 40px; display: flex; justify-content: center; align-items: center; }
 .sheet-handle { width: 40px; height: 5px; background-color: #D7CCC8; border-radius: 10px; }
 .sheet-option { display: flex; align-items: center; padding: 18px 0; border-bottom: 1px solid #E0D4C8; color: var(--text-dark); font-weight: 600; cursor: pointer; }
-.sheet-option svg { width: 24px; height: 24px; margin-right: 15px; stroke: var(--primary-brown); fill: none; stroke-width: 2; }
+.sheet-option svg { width: 24px; height: 24px; margin-right: 15px; stroke: var(--primary-brown); }
 
-/* 留言板 */
-.comment-sheet { height: 75%; border-radius: 20px 20px 0 0; z-index: 99999 !important; box-shadow: 0 -5px 30px rgba(0,0,0,0.15); background: white; }
+/* --- 留言板 --- */
+.comment-sheet { height: 75%; background-color: #fff; border-radius: 20px 20px 0 0; z-index: 999; box-shadow: 0 -5px 30px rgba(0,0,0,0.15); }
 .comment-header { height: 50px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333; position: relative; }
 .close-comment-btn { position: absolute; right: 15px; font-size: 24px; color: #999; cursor: pointer; }
 .comment-list { flex: 1; overflow-y: auto; padding: 15px; }
 .comment-item { display: flex; gap: 12px; margin-bottom: 20px; }
 .comment-avatar { width: 36px; height: 36px; background: #ddd; border-radius: 50%; flex-shrink: 0; }
-.comment-content { font-size: 14px; line-height: 1.4; }
+.comment-content { font-size: 14px; line-height: 1.4; color: #333; }
 .comment-user { font-weight: bold; margin-right: 5px; }
 .comment-time { font-size: 11px; color: #999; margin-top: 4px; }
-.comment-input-area { height: 60px; border-top: 1px solid #eee; display: flex; align-items: center; padding: 0 15px; padding-bottom: env(safe-area-inset-bottom); }
+.comment-input-area { height: 60px; border-top: 1px solid #eee; display: flex; align-items: center; padding: 0 15px; background: #fff; }
 .comment-input { flex: 1; height: 40px; border: 1px solid #ddd; border-radius: 20px; padding: 0 15px; outline: none; }
 .comment-send-btn { margin-left: 10px; color: var(--primary-brown); font-weight: bold; cursor: pointer; }
 
-/* Story Mode */
+/* --- Story Mode --- */
 #storyPage { background-color: #000; z-index: 9999; }
 .story-img-box { width: 100%; height: 100%; background-size: contain; background-repeat: no-repeat; background-position: center; }
 .story-progress-bar { position: absolute; top: 50px; left: 10px; right: 10px; display: flex; gap: 5px; z-index: 10000; }
 .progress-segment { flex: 1; height: 2px; background: rgba(255,255,255,0.3); }
+
+/* --- 付款視窗 --- */
+.payment-modal { background-color: #EFEBE9; z-index: 2000; }
+.payment-header { background-color: #D7CCC8; padding: 60px 20px 20px 20px; color: white; }
+.payment-price { font-size: 36px; font-weight: bold; margin-bottom: 20px; }
+.payment-form { padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 15px; }
+.input-group { background: white; padding: 10px 15px; border-radius: 8px; }
+.input-label { font-size: 12px; color: var(--primary-brown); font-weight: bold; margin-bottom: 5px; display: block; }
+.input-field { width: 100%; border: none; outline: none; background: transparent; }
+.pay-btn { margin-top: auto; margin-bottom: 30px; background-color: #D7CCC8; color: white; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
+.payment-close { position: absolute; top: 50px; right: 20px; color: white; font-size: 24px; cursor: pointer; }
