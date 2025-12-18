@@ -72,18 +72,32 @@ function updateVipUI() {
 // ==========================================
 async function loadExternalPages() {
     try {
+        // 1. 載入回憶頁面 (Memory)
         const memoryRes = await fetch('memory.html');
         if (memoryRes.ok) {
             document.getElementById('page-memory').innerHTML = await memoryRes.text();
-            renderCalendar();
+            renderCalendar(); // 載入後畫日曆
         }
-        const feedTemplate = document.getElementById('communityTemplate');
-        if (feedTemplate) {
-            document.getElementById('page-community').innerHTML = feedTemplate.innerHTML;
-            renderCommunity();
+
+        // 2. 載入社群頁面 (Community) - 🔥 關鍵修復
+        const communityRes = await fetch('community.html');
+        if (communityRes.ok) {
+            // 把 community.html 的內容塞進 page-community
+            document.getElementById('page-community').innerHTML = await communityRes.text();
+            
+            console.log("Community Page Loaded!"); // 在 Console 顯示成功訊息
+            
+            // 🔥 HTML 塞進去後，立刻執行渲染 (畫出假貼文)
+            renderCommunity(); 
+        } else {
+            console.error("找不到 community.html 檔案，請確認檔名是否正確");
         }
-    } catch(e) {}
+
+    } catch(e) {
+        console.error("載入頁面發生錯誤:", e);
+    }
 }
+// 執行載入
 loadExternalPages();
 
 // ==========================================
