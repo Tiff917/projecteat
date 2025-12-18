@@ -328,21 +328,54 @@ function renderCommunity() {
         let posts = e.target.result;
         container.innerHTML = ''; 
 
-        // 🔥 這裡有假資料邏輯
+        // 🔥 假資料邏輯：如果沒貼文，塞入 3 則假貼文
         if(posts.length === 0) {
             posts = [
                 {
-                    user: "Foodie_Alex", location: "Tokyo, Japan", likes: 120, caption: "Delicious ramen! 🍜",
+                    user: "Foodie_Alex", location: "Tokyo, Japan", likes: 120, caption: "Delicious ramen! 🍜 #foodie",
                     fakeImage: "https://images.unsplash.com/photo-1569937724357-19506772436f?w=600&q=80"
                 },
-                // ... 其他假貼文 ...
+                {
+                    user: "Jessica_Eats", location: "Paris, France", likes: 85, caption: "Best croissant ever 🥐",
+                    fakeImage: "https://images.unsplash.com/photo-1555507036-ab1f40388085?w=600&q=80"
+                },
+                {
+                    user: "CoffeeLover", location: "Taipei, Taiwan", likes: 200, caption: "Morning coffee vibe ☕️",
+                    fakeImage: "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=600&q=80"
+                }
             ];
         } else {
+            // 如果有真貼文，照時間排序
             posts.sort((a,b) => b.timestamp - a.timestamp);
         }
 
         posts.forEach(post => {
-            // 🔥 HTML 結構是仿 IG 的
+            // 處理圖片
+            const images = post.images || [post.imageBlob];
+            let slidesHtml = '';
+            
+            // 判斷是用假圖還是真圖
+            if (post.fakeImage) {
+                slidesHtml = `<div class="feed-image" style="background-image: url('${post.fakeImage}')"></div>`;
+            } else if (images && images.length > 0) {
+                images.forEach(blob => {
+                    if(blob) {
+                        const url = URL.createObjectURL(blob);
+                        slidesHtml += `<div class="feed-image" style="background-image: url('${url}')"></div>`;
+                    }
+                });
+            }
+
+            // 多圖計數器
+            const counterHtml = (images.length > 1 && !post.fakeImage) 
+                ? `<div class="feed-counter">1/${images.length}</div>` 
+                : '';
+
+            // 建立卡片
+            const card = document.createElement('div');
+            card.className = 'feed-card';
+            
+            // 🔥 完整的 HTML 結構 (這裡之前斷掉了)
             card.innerHTML = `
                 <div class="feed-header">
                     <div class="feed-user-info">
@@ -352,14 +385,57 @@ function renderCommunity() {
                                 ${post.user} 
                                 ${post.isVIP ? "<i class='bx bxs-bell-ring' style='color: #ED4956; font-size: 14px; margin-left:5px;'></i>" : ""}
                             </div>
-// 輔助函式：更新多圖計數器 (例如滑到第2張時變 2/3)
+                            <div class="feed-location">${post.location || 'Unknown Location'}</div>
+                        </div>
+                    </div>
+                    <i class='bx bx-dots-horizontal-rounded' style="font-size: 24px; color: #333;"></i>
+                </div>
+                
+                <div style="position: relative;">
+                    <div class="feed-carousel" onscroll="updateCounter(this)">
+                        ${slidesHtml}
+                    </div>
+                    ${counterHtml}
+                </div>
+
+                <div class="feed-actions">
+                    <svg class="action-icon like-btn" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    <svg class="action-icon comment-btn" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                    <i class='bx bx-send' style="font-size: 26px; margin-left: auto; color:#333;"></i>
+                </div>
+
+                <div class="feed-likes">
+                    Liked by <b>food_lover</b> and <b>${(post.likes || 0) + 120} others</b>
+                </div>
+
+                <div class="feed-caption">
+                    <span class="caption-username">${post.user}</span> 
+                    ${post.caption || ''}
+                </div>
+                
+                <div class="view-comments">View all comments</div>
+            `;
+
+            // 綁定事件
+            const likeBtn = card.querySelector('.like-btn');
+            likeBtn.addEventListener('click', function() {
+                this.classList.toggle('liked');
+            });
+
+            const commentBtns = card.querySelectorAll('.comment-btn, .view-comments');
+            commentBtns.forEach(btn => btn.onclick = () => openCommentSheet(post));
+
+            container.appendChild(card);
+        });
+    };
+}
+
+// 輔助函式：更新多圖計數器
 window.updateCounter = function(carousel) {
     const width = carousel.offsetWidth;
     const idx = Math.round(carousel.scrollLeft / width) + 1;
     const counter = carousel.parentElement.querySelector('.feed-counter');
-    if (counter) {
-        counter.textContent = `${idx}/${carousel.children.length}`;
-    }
+    if (counter) counter.textContent = `${idx}/${carousel.children.length}`;
 };
 
 function openCommentSheet(post) {
