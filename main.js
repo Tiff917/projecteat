@@ -1,4 +1,11 @@
 // ==========================================
+// 0. 安全性檢查 (必須放在最前面)
+// ==========================================
+if (localStorage.getItem('isLoggedIn') !== 'true') {
+    window.location.href = 'login.html'; // 沒登入就踢回登入頁
+}
+
+// ==========================================
 // 1. 全域變數與設定
 // ==========================================
 const track = document.getElementById('track');
@@ -6,8 +13,7 @@ const topBar = document.getElementById('topBar');
 const bottomBar = document.getElementById('bottomBar');
 const card = document.querySelector('.card');
 
-// 🔥 核心修改：從 localStorage 讀取 VIP 狀態
-// 如果 localStorage 裡面有 'isVIP' 且為 'true'，則 isVIP = true
+// 讀取 VIP 狀態
 let isVIP = localStorage.getItem('isVIP') === 'true';
 
 // 資料庫設定
@@ -17,7 +23,7 @@ const STORE_PHOTOS = 'photos';
 const STORE_POSTS = 'posts';
 const DB_VERSION = 1;
 
-let currentPage = 1; 
+let currentPage = 1; // 0: Memory, 1: Home, 2: Community
 let startX = 0, currentTranslate = -33.333, isDragging = false, startTranslate = 0;
 let displayDate = new Date();
 
@@ -43,18 +49,17 @@ function initDB() {
         db = e.target.result;
         renderCalendar();
         renderCommunity();
-        updateVipUI(); // 🚀 初始化時更新鈴鐺顏色
+        updateVipUI();
     };
 }
 initDB();
 
-// 🚀 更新 VIP 介面函式 (鈴鐺變色)
 function updateVipUI() {
     const bell = document.getElementById('vipBellIcon');
     const statusText = document.getElementById('vipStatusText');
     
     if (isVIP) {
-        if(bell) bell.classList.add('active'); // CSS 控制變紅
+        if(bell) bell.classList.add('active'); 
         if(statusText) statusText.textContent = "Premium";
     } else {
         if(bell) bell.classList.remove('active');
@@ -82,61 +87,47 @@ async function loadExternalPages() {
 loadExternalPages();
 
 // ==========================================
-// 4. 付款與訂閱邏輯 (新增)
+// 4. 付款與訂閱
 // ==========================================
 const subscriptionBtn = document.getElementById('subscriptionBtn');
 const paymentModal = document.getElementById('paymentModal');
 const closePaymentBtn = document.getElementById('closePaymentBtn');
 const confirmPayBtn = document.getElementById('confirmPayBtn');
 
-// 打開付款視窗
 if(subscriptionBtn) {
     subscriptionBtn.addEventListener('click', () => {
         if(isVIP) {
             alert("您已經是尊榮 Premium 會員！");
         } else {
-            // 關閉個人頁面，打開付款頁面
             document.getElementById('profilePage').classList.remove('active');
             paymentModal.classList.add('active');
         }
     });
 }
 
-// 關閉付款視窗
 if(closePaymentBtn) {
     closePaymentBtn.addEventListener('click', () => {
         paymentModal.classList.remove('active');
     });
 }
 
-// 確認付款 (模擬流程)
 if(confirmPayBtn) {
     confirmPayBtn.addEventListener('click', () => {
-        // 1. 按鈕變更狀態
         const originalText = confirmPayBtn.textContent;
         confirmPayBtn.textContent = "Processing...";
         confirmPayBtn.style.backgroundColor = "#aaa";
         confirmPayBtn.style.pointerEvents = "none";
 
-        // 2. 模擬網路延遲 1.5 秒
         setTimeout(() => {
-            // 3. 付款成功
             isVIP = true;
-            localStorage.setItem('isVIP', 'true'); // 寫入瀏覽器記憶體
-            
-            updateVipUI(); // 讓鈴鐺變紅
-            
+            localStorage.setItem('isVIP', 'true');
+            updateVipUI();
             alert("付款成功！歡迎成為 Premium 會員 🎉");
-            
-            // 4. 恢復介面
             paymentModal.classList.remove('active');
             confirmPayBtn.textContent = originalText;
             confirmPayBtn.style.backgroundColor = "";
             confirmPayBtn.style.pointerEvents = "auto";
-            
-            // 5. 重新渲染社群 (解鎖功能)
             renderCommunity();
-            
         }, 1500);
     });
 }
@@ -157,7 +148,7 @@ const cancelEditBtn = document.getElementById('cancelEditBtn');
 
 if(editBtn) {
     editBtn.addEventListener('click', () => {
-        currentEditFiles = [];
+        finalFiles = []; 
         currentEditLocation = null;
         currentEditTagged = false;
         isMultiSelectMode = false;
@@ -183,6 +174,9 @@ if(multiSelectBtn) {
     });
 }
 
+// 暫存選取的檔案
+let finalFiles = [];
+
 function renderEditorGrid() {
     editorGrid.innerHTML = '';
     
@@ -190,6 +184,9 @@ function renderEditorGrid() {
         const lastFile = finalFiles[finalFiles.length - 1];
         editorPreview.innerHTML = '';
         editorPreview.style.backgroundImage = `url('${URL.createObjectURL(lastFile)}')`;
+    } else {
+        editorPreview.innerHTML = `<div class="preview-placeholder">Select photos from gallery below</div>`;
+        editorPreview.style.backgroundImage = 'none';
     }
 
     const addBtn = document.createElement('div');
@@ -237,7 +234,7 @@ if(tagPeopleBtn) {
             tagPeopleBtn.classList.toggle('active', currentEditTagged);
             alert(currentEditTagged ? "已標註朋友！" : "取消標註");
         } else {
-            alert("🔒 這是付費會員專屬功能！\n請至個人頁面訂閱 Premium。");
+            alert("🔒 這是付費會員專屬功能！");
         }
     });
 }
@@ -426,6 +423,7 @@ window.updateCounter = function(carousel) {
     if (counter) counter.textContent = `${idx}/${carousel.children.length}`;
 };
 
+// ... (renderCalendar, openStoryMode 保持不變，篇幅原因省略，請確認檔案後段有保留) ...
 async function renderCalendar() {
     const container = document.getElementById('calendarDays');
     if (!container) return;
@@ -561,6 +559,8 @@ function simpleSave(files) {
     };
 }
 
+// 🔥🔥 滑動邏輯與登出邏輯 🔥🔥
+
 let startY = 0; 
 let isHorizontalMove = false;
 
@@ -605,10 +605,26 @@ window.addEventListener('touchend', endDrag);
 function endDrag(e) { 
     if(!isDragging) return; 
     isDragging = false; 
+    
     if (isHorizontalMove) {
         const endX = e.pageX || e.changedTouches[0].clientX; 
-        if (endX - startX > 50 && currentPage > 0) currentPage--; 
-        else if (startX - endX > 50 && currentPage < 2) currentPage++; 
+        
+        // 向左滑 (下一頁)
+        if (startX - endX > 50 && currentPage < 2) {
+            // 🔥 關鍵 VIP 擋下邏輯 🔥
+            // 如果要進入社群頁 (Page 2) 且 不是 VIP
+            if (currentPage === 1 && !isVIP) {
+                alert("社群功能僅限 Premium 會員使用！\n請至個人頁面訂閱。");
+                updateCarousel(); // 彈回原位
+                return;
+            }
+            currentPage++;
+        } 
+        // 向右滑 (上一頁)
+        else if (endX - startX > 50 && currentPage > 0) {
+            currentPage--;
+        }
+        
         updateCarousel(); 
     } else {
         updateCarousel();
@@ -628,57 +644,13 @@ function updateCarousel() {
     if(bottomBar) bottomBar.style.opacity = isHome ? 1 : 0;
 }
 
-// ==========================================
-// 7. 登入、登出與個人頁面邏輯 (放在檔案最下方)
-// ==========================================
-
-// 1. 登入邏輯
-const loginPage = document.getElementById('loginPage');
-const loginBtn = document.getElementById('loginBtn');
-
-// 檢查是否已登入 (讀取 localStorage)
-if (localStorage.getItem('isLoggedIn') === 'true') {
-    if(loginPage) loginPage.classList.add('hidden'); // 如果已登入，隱藏登入頁
-}
-
-if (loginBtn) {
-    loginBtn.addEventListener('click', () => {
-        // 執行登入
-        localStorage.setItem('isLoggedIn', 'true');
-        if(loginPage) loginPage.classList.add('hidden'); // 滑走登入頁
-    });
-}
-
-// 2. 登出邏輯
-const logoutBtn = document.querySelector('.logout-btn');
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-        // 清除登入狀態
-        localStorage.removeItem('isLoggedIn');
-        
-        // 關閉個人頁面
-        const profilePage = document.getElementById('profilePage');
-        if(profilePage) profilePage.classList.remove('active');
-        
-        // 顯示登入頁面 (把 hidden 拿掉)
-        if(loginPage) loginPage.classList.remove('hidden');
-    });
-}
-
-// 3. Subscription 按鈕點擊 (確保能夠觸發)
-const subBtn = document.getElementById('subscriptionBtn');
-if (subBtn) {
-    subBtn.onclick = () => {
-        if(isVIP) {
-            alert("您已經是尊榮 Premium 會員！");
-        } else {
-            // 關閉個人頁，打開付款頁
-            document.getElementById('profilePage').classList.remove('active');
-            document.getElementById('paymentModal').classList.add('active');
-        }
-    };
-}
-
-// 4. 個人頁面開關 (與上方整合)
 if(document.getElementById('openProfileBtn')) document.getElementById('openProfileBtn').addEventListener('click', () => document.getElementById('profilePage').classList.add('active'));
 if(document.getElementById('closeProfileBtn')) document.getElementById('closeProfileBtn').addEventListener('click', () => document.getElementById('profilePage').classList.remove('active'));
+
+// 🔥 登出按鈕：清除狀態並導向 login.html
+if(document.querySelector('.logout-btn')) document.querySelector('.logout-btn').addEventListener('click', () => {
+    localStorage.removeItem('isLoggedIn');
+    // 如果想要登出後連 VIP 也重置，可以加下面這行：
+    // localStorage.removeItem('isVIP'); 
+    window.location.href = 'login.html';
+});
