@@ -4,10 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Gourmet App</title>
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+    <div class="login-page" id="loginPage">
+        <div class="login-logo"></div>
+        <div class="login-title">Gourmet App</div>
+        <div class="login-subtitle">Share your delicious moments</div>
+        <button class="login-action-btn" id="loginBtn">Log In</button>
+    </div>
 
     <div class="profile-page" id="profilePage">
         <div class="back-btn" id="closeProfileBtn">
@@ -49,36 +55,17 @@
     </div>
 
     <div class="carousel-track" id="track">
-
         <div class="page-container" id="page-memory">
             <div class="loading-text">Loading Memory...</div>
         </div>
 
         <div class="page-container" id="page-home">
-            <div class="card">
-                <div class="date-display" id="dateDisplay">
-                    <span id="dateText">Today</span>
-                </div>
-            </div>
+            <div class="card"></div>
         </div>
 
         <div class="page-container" id="page-community">
-            <div class="page-content-wrapper" style="height: 100%; display: flex; flex-direction: column;">
-                
-                <div style="padding: 20px 15px 10px 15px; background-color: #F2EBE0; z-index: 10;">
-                    <h2 style="color: #5D4037; font-size: 24px; font-weight: 700; margin: 0;">Community</h2>
-                    <p style="color: #8D6E63; font-size: 12px; margin: 5px 0 0 0;">Discover VIP moments</p>
-                </div>
-
-                <div id="feedContainer" style="flex: 1; overflow-y: auto; padding-bottom: 100px;">
-                    <div style="text-align: center; margin-top: 50px; color: #8D6E63;">
-                        <i class='bx bx-loader-alt bx-spin' style="font-size: 24px;"></i>
-                        <p>Loading...</p>
-                    </div>
-                </div>
-            </div>
+             <div class="loading-text">Loading Community...</div>
         </div>
-
     </div>
 
     <div class="bottom-bar" id="bottomBar">
@@ -131,6 +118,12 @@
             </div>
         </div>
         <div class="gallery-grid" id="editorGrid"></div>
+    </div>
+
+    <div id="communityTemplate" style="display: none;">
+        <div class="feed-container" id="feedContainer" style="width: 100%; overflow-y: auto;">
+            <div class="loading-text" style="text-align: center; margin-top: 20px;">No posts yet.</div>
+        </div>
     </div>
 
     <div class="payment-modal" id="paymentModal">
