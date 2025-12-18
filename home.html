@@ -19,7 +19,14 @@
         </div>
         <div class="profile-menu">
             <div class="menu-item"><span>My Profile</span></div>
-            <div class="menu-item"><span>Subscription</span></div>
+            <div class="menu-item" id="subscriptionBtn">
+                <svg class="vip-bell" id="vipBellIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span>Subscription</span>
+                <span id="vipStatusText" style="margin-left: auto; font-size: 12px; color: #8D6E63;">Free</span>
+            </div>
             <div class="menu-item"><span>Address</span></div>
             <div class="menu-item"><span>Contact Us</span></div>
             <div class="menu-item"><span>Setting</span></div>
@@ -125,6 +132,53 @@
     </div>
 </div>
 
+<div class="payment-modal" id="paymentModal">
+    <div class="payment-close" id="closePaymentBtn">&times;</div>
+    
+    <div class="payment-header">
+        <div class="payment-title">Subscribe to Premium Plus</div>
+        <div class="payment-price">NT.99.00</div>
+        <div class="payment-summary">
+            <span>Tax</span><span>NT.0.00</span>
+        </div>
+        <div class="payment-summary" style="margin-top: 5px;">
+            <span>Total payable today</span><span>NT.99.00</span>
+        </div>
+    </div>
+
+    <div class="payment-form">
+        <div class="input-group">
+            <label class="input-label">Email</label>
+            <input type="email" class="input-field" value="YYYT.gmail.com" readonly>
+        </div>
+
+        <div class="input-group">
+            <label class="input-label">Card number</label>
+            <input type="text" class="input-field" placeholder="1234 1234 1234 1234">
+        </div>
+
+        <div class="card-row">
+            <div class="input-group">
+                <label class="input-label">Expiration</label>
+                <input type="text" class="input-field" placeholder="MM/YY">
+            </div>
+            <div class="input-group">
+                <label class="input-label">CVC</label>
+                <input type="text" class="input-field" placeholder="123">
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <label class="input-label">Country</label>
+            <select class="input-field" style="background:transparent;">
+                <option>Hong Kong SAR China</option>
+                <option>Taiwan</option>
+            </select>
+        </div>
+
+        <div class="pay-btn" id="confirmPayBtn">Next</div>
+    </div>
+</div>
     <script src="main.js"></script>
     
 </body>
