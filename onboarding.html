@@ -2,275 +2,234 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>User Profile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Onboarding - Gourmet App</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <style>
-        /* --- 核心變數：完全依照截圖配色 --- */
-        :root {
-            --bg-body: #EFE8E0;      /* 網頁背景 (稍微深一點區隔) */
-            --bg-phone: #F3EFE9;     /* 手機畫面背景 (燕麥米色) */
-            --text-primary: #8B7D74; /* 主文字 (暖深棕) */
-            --text-secondary: #A69890; /* 次要文字 */
-            --btn-bg: #C5B6AA;       /* 按鈕背景 (奶茶色) */
-            --btn-text: #FFFFFF;     /* 按鈕文字 */
-            --icon-color: #8B7D74;   /* 圖示顏色 */
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
+        /* 1. 基礎設定 (延續 Morandi 風格) */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
         body {
-            background-color: var(--bg-body);
+            background-color: #E3D5CA; /* 電腦版背景 */
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            height: 100dvh;
+            padding: 20px;
         }
 
-        /* --- 手機外框容器 --- */
-        .phone-container {
+        /* 2. RWD 卡片容器 */
+        .onboarding-card {
             width: 100%;
-            max-width: 375px;
-            height: 100%;
-            max-height: 812px;
-            background-color: var(--bg-phone);
-            position: relative;
+            max-width: 400px;
+            background-color: #F5EBE1; /* 手機介面底色 */
+            border-radius: 30px;
+            padding: 40px 30px;
+            box-shadow: 0 15px 35px rgba(109, 93, 85, 0.15);
             display: flex;
             flex-direction: column;
+            align-items: center;
+            height: 90vh; /* 固定高度以維持佈局 */
+            position: relative;
             overflow: hidden;
-            box-shadow: 0 20px 40px rgba(100, 90, 80, 0.15);
         }
 
-        /* 電腦版時的圓角與邊框模擬 */
-        @media (min-width: 400px) {
-            .phone-container {
-                height: 762px;
-                border-radius: 40px;
-                border: 8px solid #2b2b2b;
+        /* 手機版滿版 */
+        @media screen and (max-width: 480px) {
+            body { padding: 0; background-color: #F5EBE1; align-items: flex-start; }
+            .onboarding-card { 
+                max-width: 100%; 
+                min-height: 100vh; 
+                border-radius: 0; 
+                box-shadow: none; 
+                padding-top: 60px; /* 避開狀態列 */
+                padding-bottom: 40px;
             }
         }
 
-        /* --- 頂部狀態列 (Status Bar) --- */
-        .status-bar {
-            padding: 14px 20px 0 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            font-weight: 600;
-            color: #000;
-            height: 44px;
-            z-index: 10;
-        }
-
-        .notch {
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 120px;
-            height: 30px;
-            background-color: #000;
-            border-bottom-left-radius: 16px;
-            border-bottom-right-radius: 16px;
-            z-index: 20;
-        }
-
-        /* --- 頂部導航區 (Back Button) --- */
-        .nav-header {
-            padding: 10px 20px;
-            display: flex;
-            align-items: center;
-        }
-
-        .back-btn {
-            width: 36px;
-            height: 36px;
-            background-color: rgba(0,0,0,0.05); /* 淡淡的背景 */
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            color: var(--text-primary);
-            font-size: 20px;
-            transition: background 0.2s;
-        }
+        /* 3. 標題區域 */
+        .header { text-align: center; margin-bottom: 40px; margin-top: 20px; }
+        .header h1 { font-size: 20px; font-weight: 500; color: #6D5D55; line-height: 1.4; letter-spacing: 0.5px; }
         
-        .back-btn:active {
-            background-color: rgba(0,0,0,0.1);
-        }
-
-        /* --- 個人資訊區域 (Profile Header) --- */
-        .profile-section {
+        /* 4. 選項區域 (左右分割) */
+        .options-container {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 10px;
+            gap: 15px;
+            width: 100%;
+            flex: 1; /* 佔據剩餘空間 */
+            max-height: 300px; /* 限制選項高度，模仿截圖 */
             margin-bottom: 40px;
         }
 
-        .avatar {
-            width: 100px;
-            height: 100px;
-            background-color: #F5F5F5; /* 更亮的白色圓圈 */
-            border-radius: 50%;
-            margin-bottom: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-
-        .user-name {
-            font-size: 22px;
-            font-weight: 600;
-            color: var(--text-primary);
-            letter-spacing: 2px;
-            margin-bottom: 5px;
-        }
-
-        .user-email {
-            font-size: 14px;
-            color: var(--text-primary);
-            opacity: 0.7;
-            font-weight: 400;
-        }
-
-        /* --- 選單列表 (Menu List) --- */
-        .menu-list {
-            padding: 0 40px; /* 左右留白，讓列表集中 */
-            flex: 1; /* 佔據剩餘空間 */
-        }
-
-        .menu-item {
+        .option-btn {
+            flex: 1;
+            border-radius: 4px; /* 方正帶小圓角 */
             display: flex;
-            align-items: center;
-            padding: 18px 0;
-            cursor: pointer;
-            color: var(--text-primary);
-            transition: opacity 0.2s;
-        }
-
-        .menu-item:active {
-            opacity: 0.6;
-        }
-
-        .menu-item i {
-            font-size: 22px;
-            margin-right: 20px; /* 圖示與文字的距離 */
-            color: var(--icon-color);
-        }
-
-        .menu-item span {
-            font-size: 17px;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-        }
-
-        /* --- 登出按鈕 (Logout) --- */
-        .logout-container {
-            padding: 20px 30px 40px 30px;
-            display: flex;
+            flex-direction: column;
             justify-content: center;
-        }
-
-        .logout-btn {
-            width: 100%;
-            height: 55px;
-            background-color: var(--btn-bg);
-            color: var(--btn-text);
-            border: none;
-            border-radius: 16px;
+            align-items: center;
             font-size: 18px;
             font-weight: 500;
-            letter-spacing: 1px;
+            color: #5D4037;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(197, 182, 170, 0.4);
-            transition: transform 0.1s;
+            transition: all 0.2s;
+            position: relative;
+            /* 預設無邊框 */
+            border: 3px solid transparent; 
         }
 
-        .logout-btn:active {
+        /* 左邊選項 (灰色) */
+        .option-left { background-color: #BDBdbd; color: #4a4a4a; }
+        
+        /* 右邊選項 (米色) */
+        .option-right { background-color: #D3C4B6; color: #5D4037; }
+
+        /* 選中狀態 */
+        .option-btn.selected {
+            border-color: #6D5D55; /* 選中時顯示深色邊框 */
             transform: scale(0.98);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
         }
 
-        /* --- 底部橫條 --- */
-        .home-indicator {
-            width: 130px;
-            height: 5px;
-            background-color: #000;
-            border-radius: 3px;
-            position: absolute;
-            bottom: 8px;
-            left: 50%;
-            transform: translateX(-50%);
-            opacity: 0.8;
+        /* 5. 底部打勾按鈕 */
+        .confirm-btn {
+            width: 80%;
+            height: 50px;
+            background-color: #C4B5A8;
+            border-radius: 10px;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            margin-top: auto; /* 推到底部 */
+            transition: background 0.2s;
+        }
+        .confirm-btn:active { background-color: #a8998e; }
+        .confirm-btn i { font-size: 24px; color: white; }
+
+        /* 進度條 (可選，讓使用者知道還剩多少) */
+        .progress-indicator {
+            position: absolute; top: 20px; right: 20px;
+            font-size: 12px; color: #9c8e87;
+        }
+
+        /* 動畫效果 */
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
     </style>
 </head>
 <body>
 
-    <div class="phone-container">
-        <div class="notch"></div>
-        
-        <div class="status-bar">
-            <span style="margin-left: 10px;">9:41</span>
-            <div style="display: flex; gap: 6px; margin-right: 10px;">
-                <i class='bx bx-signal-5'></i>
-                <i class='bx bx-wifi'></i>
-                <i class='bx bxs-battery'></i>
-            </div>
+    <div class="onboarding-card">
+        <div class="progress-indicator" id="progressText">1/6</div>
+
+        <div class="header">
+            <h1>Make us KNOW<br>you more</h1>
         </div>
 
-        <div class="nav-header">
-            <div class="back-btn">
-                <i class='bx bx-chevron-left'></i>
-            </div>
+        <div class="options-container fade-in" id="optionsContainer">
+            <div class="option-btn option-left" onclick="selectOption(0)">飯</div>
+            <div class="option-btn option-right" onclick="selectOption(1)">麵</div>
         </div>
 
-        <div class="profile-section">
-            <div class="avatar"></div> <h2 class="user-name">TTTTT</h2>
-            <p class="user-email">YYYT.gmail.com</p>
-        </div>
-
-        <div class="menu-list">
-            <div class="menu-item">
-                <i class='bx bx-user'></i>
-                <span>My Profile</span>
-            </div>
-            <div class="menu-item">
-                <i class='bx bx-bell'></i>
-                <span>Subscription</span>
-            </div>
-            <div class="menu-item">
-                <i class='bx bx-map'></i>
-                <span>Address</span>
-            </div>
-            <div class="menu-item">
-                <i class='bx bx-envelope'></i>
-                <span>Contact Us</span>
-            </div>
-            <div class="menu-item">
-                <i class='bx bx-cog'></i>
-                <span>Setting</span>
-            </div>
-            <div class="menu-item">
-                <i class='bx bx-help-circle'></i>
-                <span>Help&QA</span>
-            </div>
-        </div>
-
-        <div class="logout-container">
-            <button class="logout-btn">Log Out</button>
-        </div>
-
-        <div class="home-indicator"></div>
+        <button class="confirm-btn" id="nextBtn">
+            <i class='bx bx-check'></i>
+        </button>
     </div>
 
+    <script>
+        // 題目資料 (依照您的截圖設定)
+        const questions = [
+            { left: "飯", right: "麵" },
+            { left: "葷食", right: "素食" },
+            { left: "中式", right: "美式" },
+            { left: "清淡", right: "重口味" },
+            { left: "餐廳", right: "街頭美食" },
+            { left: "獨享", right: "多人分享" }
+        ];
+
+        let currentStep = 0;
+        let userPreferences = []; // 儲存使用者的選擇
+        let currentSelection = null; // 當前這題選了什麼 (0:左, 1:右)
+
+        const optionsContainer = document.getElementById('optionsContainer');
+        const nextBtn = document.getElementById('nextBtn');
+        const progressText = document.getElementById('progressText');
+
+        // 渲染題目函式
+        function renderQuestion(index) {
+            // 更新進度文字
+            progressText.textContent = `${index + 1}/${questions.length}`;
+            
+            // 重置選擇
+            currentSelection = null;
+
+            // 取得題目內容
+            const q = questions[index];
+
+            // 重新產生 HTML (加上動畫 class)
+            optionsContainer.innerHTML = `
+                <div class="option-btn option-left" onclick="selectOption(0)">${q.left}</div>
+                <div class="option-btn option-right" onclick="selectOption(1)">${q.right}</div>
+            `;
+            
+            // 觸發重繪以播放動畫
+            optionsContainer.classList.remove('fade-in');
+            void optionsContainer.offsetWidth; // 強制重繪
+            optionsContainer.classList.add('fade-in');
+        }
+
+        // 選擇選項函式
+        window.selectOption = function(side) {
+            currentSelection = side;
+            const btns = optionsContainer.querySelectorAll('.option-btn');
+            
+            // 移除所有 selected 樣式
+            btns.forEach(btn => btn.classList.remove('selected'));
+            
+            // 加上 selected 樣式
+            btns[side].classList.add('selected');
+        }
+
+        // 下一題按鈕邏輯
+        nextBtn.addEventListener('click', () => {
+            if (currentSelection === null) {
+                alert("請選擇一個選項 Please select an option.");
+                return;
+            }
+
+            // 儲存選擇 (可選：之後可以傳到後端或存 localStorage)
+            userPreferences.push(currentSelection === 0 ? questions[currentStep].left : questions[currentStep].right);
+
+            // 進入下一題
+            currentStep++;
+
+            if (currentStep < questions.length) {
+                renderQuestion(currentStep);
+            } else {
+                // 🔥 全部做完，進入主頁
+                finishOnboarding();
+            }
+        });
+
+        function finishOnboarding() {
+            // 儲存偏好到 localStorage (選用)
+            localStorage.setItem('userPrefs', JSON.stringify(userPreferences));
+            // 確保已登入狀態
+            localStorage.setItem('isLoggedIn', 'true');
+            
+            // 跳轉主頁
+            window.location.href = 'home.html';
+        }
+
+        // 初始化：渲染第一題
+        renderQuestion(0);
+
+    </script>
 </body>
 </html>
