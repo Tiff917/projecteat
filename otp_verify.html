@@ -2,376 +2,123 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Enter OTP</title>
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <style>
-        /* --- 1. 基礎設定 --- */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-        }
-
-        :root {
-            --bg-color: #F2EBE0;       
-            --text-dark: #6D5D55; 
-            --text-light: #9E9E9E;     
-            --btn-color: #C4B5A8; 
-            --input-border: #8D6E63;
-        }
-
-        body {
-            background-color: #e0e0e0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* --- 2. 手機外框 --- */
-        .phone-frame {
-            width: 375px;
-            height: 740px;
-            background-color: var(--bg-color);
-            border-radius: 44px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
-            position: relative;
-            overflow: hidden;
-            border: 8px solid #222;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* --- 3. 狀態列 --- */
-        .status-bar {
-            position: absolute; top: 0; left: 0; width: 100%; height: 44px;
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0 25px; z-index: 10;
-        }
-        .dynamic-island {
-            position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
-            width: 120px; height: 35px; background-color: #000; border-radius: 20px;
-        }
-        .status-icons { display: flex; gap: 5px; }
-
-        /* --- 4. 內容區域 --- */
-        .content {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 140px; 
-            padding-left: 25px;
-            padding-right: 25px;
-            cursor: default;
-        }
-
-        .title {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 15px;
-        }
-
-        .subtitle {
-            font-size: 14px;
-            color: #8D6E63;
-            text-align: center;
-            margin-bottom: 50px;
-            line-height: 1.5;
-            padding: 0 10px;
-        }
+        /* 共用 RWD 樣式 */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #E3D5CA; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; overflow: hidden; }
         
+        .auth-card {
+            width: 100%; max-width: 400px; background-color: #F5EBE1; border-radius: 30px; padding: 40px 30px;
+            box-shadow: 0 15px 35px rgba(109, 93, 85, 0.15); display: flex; flex-direction: column; align-items: center; position: relative;
+            height: 100vh; max-height: 800px; /* 限制高度以免鍵盤跑出去 */
+        }
+
+        @media screen and (max-width: 480px) {
+            body { padding: 0; background-color: #F5EBE1; align-items: flex-start; }
+            .auth-card { max-width: 100%; min-height: 100vh; border-radius: 0; box-shadow: none; padding-top: 60px; max-height: none; }
+        }
+
+        .back-btn { position: absolute; top: 30px; left: 20px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6D5D55; font-size: 32px; text-decoration: none; }
+        .title { font-size: 26px; font-weight: 700; color: #6D5D55; margin-bottom: 10px; margin-top: 20px; }
+        .subtitle { font-size: 14px; color: #8D6E63; text-align: center; margin-bottom: 40px; line-height: 1.5; }
         #user-email { font-weight: 600; color: #5D4037; }
 
-        /* OTP 輸入框容器 */
-        .otp-container {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            margin-bottom: 50px;
-            padding: 0 10px;
-            cursor: text;
-        }
+        .otp-container { display: flex; justify-content: center; gap: 15px; margin-bottom: 40px; width: 100%; }
+        .otp-box { width: 50px; height: 60px; border: 2px solid #D7BDB0; border-radius: 10px; font-size: 24px; display: flex; align-items: center; justify-content: center; color: #5D4037; background: #fff; font-weight: bold; }
+        .otp-box.active { border-color: #8D6E63; box-shadow: 0 0 0 4px rgba(141, 110, 99, 0.1); }
 
-        .otp-box {
-            width: 60px;
-            height: 60px;
-            border: 2px solid #A1887F;
-            background-color: transparent;
-            font-size: 28px;
-            text-align: center;
-            line-height: 56px;
-            color: var(--text-dark);
-            border-radius: 2px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        
-        .otp-box.active {
-            border-color: #5D4037;
-            background-color: rgba(255,255,255,0.4);
-            transform: scale(1.05);
-            box-shadow: 0 4px 10px rgba(93, 64, 55, 0.1);
-        }
+        .verify-btn { width: 100%; padding: 16px; background-color: #D7BDB0; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
+        .verify-btn:active { opacity: 0.9; }
 
-        /* Verify 按鈕 */
-        .verify-btn {
-            width: 100%;
-            height: 55px;
-            background-color: var(--btn-color);
-            color: white;
-            border: none;
-            font-size: 18px;
-            font-weight: 700;
-            cursor: pointer;
-            border-radius: 2px;
-        }
-        .verify-btn:active { opacity: 0.8; }
-
-        /* --- 5. 鍵盤區域 --- */
-        .keyboard-area {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            z-index: 50;
-            background-color: rgba(245, 245, 245, 0.95);
-            backdrop-filter: blur(10px);
-            padding-bottom: 20px;
-            border-top: 1px solid #ccc;
-            border-radius: 20px 20px 0 0;
-            transform: translateY(100%);
-            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-
-        .keyboard-area.show {
-            transform: translateY(0);
-        }
-
-        .suggestion-bar {
-            height: 45px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-bottom: 1px solid #e5e5e5;
-            background-color: rgba(255,255,255,0.5);
-        }
-        .suggestion-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: pointer;
-        }
-        .sug-label { font-size: 11px; color: #888; }
-        .sug-code { font-size: 16px; color: #000; font-weight: 500; }
-
-        .keyboard-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1px;
-            padding-top: 5px;
-        }
-
-        .key {
-            height: 55px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background-color: transparent;
-            cursor: pointer;
-            font-size: 24px;
-            color: #000;
-            border-radius: 5px;
-            margin: 5px;
-            transition: background-color 0.1s;
-        }
-        .key:active { background-color: #d1d1d1; }
-        
-        .key-sub {
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            margin-top: 2px;
-            color: #000;
-        }
-        .key-blank { pointer-events: none; }
-        .key-backspace svg { width: 24px; height: 24px; fill: #000; }
-
-        /* Home Indicator */
-        .home-indicator {
-            position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
-            width: 130px; height: 5px; background-color: #000; border-radius: 3px; z-index: 100;
-        }
-
+        /* 模擬鍵盤 */
+        .keyboard-area { position: absolute; bottom: 0; left: 0; width: 100%; background-color: #f0f0f0; border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform 0.3s; z-index: 50; padding-bottom: 20px; }
+        .keyboard-area.show { transform: translateY(0); }
+        .keyboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; }
+        .key { height: 55px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; color: #333; }
+        .key:active { background: #e0e0e0; }
+        .key-sub { font-size: 9px; margin-top: 2px; color: #666; font-weight: bold; letter-spacing: 1px; }
     </style>
 </head>
 <body>
+    <div class="auth-card" id="contentArea">
+        <a href="forgot-password.html" class="back-btn"><i class='bx bx-chevron-left'></i></a>
+        <div class="title">Enter OTP</div>
+        <div class="subtitle">A 4 digit code has been sent to<br><span id="user-email">email@example.com</span></div>
 
-    <div class="phone-frame">
-        
-        <div class="status-bar">
-            <div class="time">9:41</div>
-            <div class="dynamic-island"></div>
-            <div class="status-icons">
-                <svg width="18" height="12" viewBox="0 0 18 12" fill="black"><path d="M1 10h2v2H1zm4-3h2v5H5zm4-3h2v8H9zm4-3h2v11h-2z"/></svg>
-                <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="black" stroke-width="1.5"><rect x="1" y="1" width="18" height="10" rx="2" /><path d="M20 4v4" /><rect x="3" y="3" width="14" height="6" fill="black" rx="1"/></svg>
-            </div>
+        <div class="otp-container" id="otpContainer">
+            <div class="otp-box active" id="box1"></div>
+            <div class="otp-box" id="box2"></div>
+            <div class="otp-box" id="box3"></div>
+            <div class="otp-box" id="box4"></div>
         </div>
 
-        <div class="content" id="contentArea">
-            <div class="title">Enter OTP</div>
-            <div class="subtitle">
-                A 4 digit code has been sent to<br>
-                <span id="user-email">user@example.com</span>
-            </div>
-
-            <div class="otp-container" id="otpContainer">
-                <div class="otp-box active" id="box1"></div>
-                <div class="otp-box" id="box2"></div>
-                <div class="otp-box" id="box3"></div>
-                <div class="otp-box" id="box4"></div>
-            </div>
-
-            <button class="verify-btn" id="verifyBtn">Verify</button>
-        </div>
+        <button class="verify-btn" id="verifyBtn">Verify</button>
 
         <div class="keyboard-area" id="keyboard">
-            <div class="suggestion-bar" onclick="autoFill()">
-                <div class="suggestion-item">
-                    <span class="sug-label">From Messages</span>
-                    <span class="sug-code">1234</span>
-                </div>
-            </div>
-
+            <div style="height:40px; background:#e8e8e8; display:flex; justify-content:center; align-items:center; color:#666; font-size:14px; cursor:pointer;" onclick="autoFill()">Tap to autofill: 1234</div>
             <div class="keyboard-grid">
-                <div class="key" onclick="pressKey(1)">1<span class="key-sub"></span></div>
+                <div class="key" onclick="pressKey(1)">1</div>
                 <div class="key" onclick="pressKey(2)">2<span class="key-sub">ABC</span></div>
                 <div class="key" onclick="pressKey(3)">3<span class="key-sub">DEF</span></div>
-                
                 <div class="key" onclick="pressKey(4)">4<span class="key-sub">GHI</span></div>
                 <div class="key" onclick="pressKey(5)">5<span class="key-sub">JKL</span></div>
                 <div class="key" onclick="pressKey(6)">6<span class="key-sub">MNO</span></div>
-                
                 <div class="key" onclick="pressKey(7)">7<span class="key-sub">PQRS</span></div>
                 <div class="key" onclick="pressKey(8)">8<span class="key-sub">TUV</span></div>
                 <div class="key" onclick="pressKey(9)">9<span class="key-sub">WXYZ</span></div>
-                
-                <div class="key key-blank"></div>
+                <div class="key"></div>
                 <div class="key" onclick="pressKey(0)">0</div>
-                <div class="key key-backspace" onclick="pressBackspace()">
-                    <svg viewBox="0 0 24 24"><path d="M22 3H7c-.69 0-1.23.35-1.59.88L0 12l5.41 8.11c.36.53.9.89 1.59.89h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-3 12.59L17.59 17 14 13.41 10.41 17 9 15.59 12.59 12 9 8.41 10.41 7 14 10.59 17.59 7 19 8.41 15.41 12 19 15.59z"/></svg>
-                </div>
+                <div class="key" onclick="pressBackspace()"><i class='bx bx-left-arrow-alt'></i></div>
             </div>
         </div>
-
-        <div class="home-indicator"></div>
     </div>
 
     <script>
-        // 初始化 Email 顯示
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const emailParam = urlParams.get('email');
-            const emailSpan = document.getElementById('user-email');
-            if (emailParam) emailSpan.textContent = emailParam;
-        });
+        // 初始化
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email');
+        if(email) document.getElementById('user-email').textContent = email;
 
-        // 鍵盤控制邏輯
         const keyboard = document.getElementById('keyboard');
         const otpContainer = document.getElementById('otpContainer');
-        const contentArea = document.getElementById('contentArea');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const boxes = [document.getElementById('box1'), document.getElementById('box2'), document.getElementById('box3'), document.getElementById('box4')];
+        let currentCode = "";
 
-        otpContainer.addEventListener('click', (e) => {
-            e.stopPropagation();
-            keyboard.classList.add('show');
-        });
-
-        contentArea.addEventListener('click', () => {
-            keyboard.classList.remove('show');
-        });
-        
-        keyboard.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
+        // 鍵盤開關
+        otpContainer.addEventListener('click', (e) => { e.stopPropagation(); keyboard.classList.add('show'); });
+        document.getElementById('contentArea').addEventListener('click', () => keyboard.classList.remove('show'));
+        keyboard.addEventListener('click', (e) => e.stopPropagation());
 
         // 輸入邏輯
-        let currentCode = "";
-        const boxes = [
-            document.getElementById('box1'),
-            document.getElementById('box2'),
-            document.getElementById('box3'),
-            document.getElementById('box4')
-        ];
-        const verifyBtn = document.getElementById('verifyBtn');
-
         function pressKey(num) {
-            if (currentCode.length < 4) {
-                currentCode += num;
-                updateBoxes();
-            }
+            if (currentCode.length < 4) { currentCode += num; updateBoxes(); }
         }
-
         function pressBackspace() {
-            if (currentCode.length > 0) {
-                currentCode = currentCode.slice(0, -1);
-                updateBoxes();
-            }
+            if (currentCode.length > 0) { currentCode = currentCode.slice(0, -1); updateBoxes(); }
         }
-
-        function autoFill() {
-            currentCode = "1234";
-            updateBoxes();
-        }
-
+        function autoFill() { currentCode = "1234"; updateBoxes(); }
+        
         function updateBoxes() {
-            boxes.forEach(box => {
-                box.textContent = "";
-                box.classList.remove('active');
-            });
-
-            for (let i = 0; i < currentCode.length; i++) {
-                boxes[i].textContent = currentCode[i];
-            }
-
-            if (currentCode.length < 4) {
-                boxes[currentCode.length].classList.add('active');
-            } else {
-                boxes[3].classList.add('active');
-            }
+            boxes.forEach(b => { b.textContent = ""; b.classList.remove('active'); });
+            for(let i=0; i<currentCode.length; i++) boxes[i].textContent = currentCode[i];
+            if(currentCode.length < 4) boxes[currentCode.length].classList.add('active');
+            else boxes[3].classList.add('active');
         }
 
-        // --- 修改後的 Verify 按鈕邏輯 ---
+        // 驗證按鈕
         verifyBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // 避免觸發背景收鍵盤
-            
+            e.stopPropagation();
             if (currentCode.length === 4) {
-                // 1. 取得當前網址上的 email (如果有的話)
-                const urlParams = new URLSearchParams(window.location.search);
-                const currentEmail = urlParams.get('email');
-                
-                // 2. 構建目標網址
-                let targetUrl = 'reset_password.html';
-                
-                // 3. 如果原本有 email，就把它傳遞到下一頁，保持狀態連貫
-                if (currentEmail) {
-                    targetUrl += `?email=${currentEmail}`;
-                }
-
-                // 4. 跳轉
-                window.location.href = targetUrl;
-                
+                // 🔥 跳轉到重設密碼頁，繼續傳遞 Email
+                window.location.href = `reset_password.html?email=${encodeURIComponent(email)}`;
             } else {
                 alert("Please enter 4 digits.");
             }
         });
-
     </script>
 </body>
 </html>
