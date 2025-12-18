@@ -48,7 +48,7 @@ function initDB() {
     request.onsuccess = (e) => {
         db = e.target.result;
         renderCalendar();
-        renderCommunity();
+        renderCommunity(); // 資料庫就緒後渲染社群
         updateVipUI();
     };
 }
@@ -68,7 +68,7 @@ function updateVipUI() {
 }
 
 // ==========================================
-// 3. 載入頁面
+// 3. 載入頁面 (Memory)
 // ==========================================
 async function loadExternalPages() {
     try {
@@ -78,20 +78,9 @@ async function loadExternalPages() {
             document.getElementById('page-memory').innerHTML = await memoryRes.text();
             renderCalendar(); // 載入後畫日曆
         }
-
-        // 2. 載入社群頁面 (Community) - 🔥 關鍵修復
-        const communityRes = await fetch('community.html');
-        if (communityRes.ok) {
-            // 把 community.html 的內容塞進 page-community
-            document.getElementById('page-community').innerHTML = await communityRes.text();
-            
-            console.log("Community Page Loaded!"); // 在 Console 顯示成功訊息
-            
-            // 🔥 HTML 塞進去後，立刻執行渲染 (畫出假貼文)
-            renderCommunity(); 
-        } else {
-            console.error("找不到 community.html 檔案，請確認檔名是否正確");
-        }
+        
+        // 2. 社群頁面已經直接寫在 home.html 裡了，所以直接渲染即可
+        renderCommunity();
 
     } catch(e) {
         console.error("載入頁面發生錯誤:", e);
@@ -283,12 +272,14 @@ if(publishBtn) {
         const memoryStore = tx.objectStore(STORE_PHOTOS);
         const postStore = tx.objectStore(STORE_POSTS);
 
+        // 1. 存入回憶 (Memory)
         finalFiles.forEach((file, index) => {
             memoryStore.add({
                 date: todayStr, time: timeStr, imageBlob: file, timestamp: now.getTime() + index
             });
         });
 
+        // 2. 如果是 VIP，也存入社群 (Community)
         if(isVIP) {
             postStore.add({
                 user: "My Account",
@@ -375,7 +366,7 @@ function renderCommunity() {
             const card = document.createElement('div');
             card.className = 'feed-card';
             
-            // 🔥 完整的 HTML 結構 (這裡之前斷掉了)
+            // 🔥 HTML 結構 (仿 IG)
             card.innerHTML = `
                 <div class="feed-header">
                     <div class="feed-user-info">
@@ -483,14 +474,9 @@ window.sendComment = function() {
     }
 };
 
-window.updateCounter = function(carousel) {
-    const width = carousel.offsetWidth;
-    const idx = Math.round(carousel.scrollLeft / width) + 1;
-    const counter = carousel.parentElement.querySelector('.feed-counter');
-    if (counter) counter.textContent = `${idx}/${carousel.children.length}`;
-};
-
-// ... (renderCalendar, openStoryMode 保持不變，篇幅原因省略，請確認檔案後段有保留) ...
+// ==========================================
+// 7. 回憶與日曆邏輯 (Memory & Calendar)
+// ==========================================
 async function renderCalendar() {
     const container = document.getElementById('calendarDays');
     if (!container) return;
@@ -626,8 +612,9 @@ function simpleSave(files) {
     };
 }
 
-// 🔥🔥 滑動邏輯與登出邏輯 🔥🔥
-
+// ==========================================
+// 8. 滑動邏輯與頁面切換
+// ==========================================
 let startY = 0; 
 let isHorizontalMove = false;
 
@@ -711,13 +698,14 @@ function updateCarousel() {
     if(bottomBar) bottomBar.style.opacity = isHome ? 1 : 0;
 }
 
+// ==========================================
+// 9. 全域按鈕事件 (Profile, Logout)
+// ==========================================
 if(document.getElementById('openProfileBtn')) document.getElementById('openProfileBtn').addEventListener('click', () => document.getElementById('profilePage').classList.add('active'));
 if(document.getElementById('closeProfileBtn')) document.getElementById('closeProfileBtn').addEventListener('click', () => document.getElementById('profilePage').classList.remove('active'));
 
-// 🔥 登出按鈕：清除狀態並導向 login.html
 if(document.querySelector('.logout-btn')) document.querySelector('.logout-btn').addEventListener('click', () => {
     localStorage.removeItem('isLoggedIn');
-    // 如果想要登出後連 VIP 也重置，可以加下面這行：
-    // localStorage.removeItem('isVIP'); 
+    // localStorage.removeItem('isVIP'); // 可選：保留 VIP 狀態
     window.location.href = 'login.html';
 });
