@@ -5,105 +5,374 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Gourmet App</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        /* --- 1. 核心配色 (依照截圖) --- */
+        :root {
+            --bg-color: #F3EFE9;      /* 燕麥米色背景 */
+            --primary-brown: #8B7465; /* 可可棕 (按鈕/文字) */
+            --text-on-brown: #FFFFFF; /* 棕色按鈕上的白色圖示 */
+            --safe-top: env(safe-area-inset-top, 20px);
+            --safe-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body, html {
+            width: 100%; height: 100%;
+            overflow: hidden; /* 禁止原生捲動，交給 JS */
+            background-color: var(--bg-color);
+        }
+
+        /* --- 2. 滑動軌道 (Carousel) --- */
+        .carousel-track {
+            display: flex;
+            width: 300%; /* 三個頁面寬度 */
+            height: 100%;
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            /* JS 會負責設定初始位置 */
+        }
+
+        .page-container {
+            width: 33.3333%; /* 每個頁面佔 1/3 */
+            height: 100%;
+            position: relative;
+            padding-top: calc(80px + var(--safe-top));    /* 避開 Top Bar */
+            padding-bottom: calc(100px + var(--safe-bottom)); /* 避開 Bottom Bar */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- 3. Top Bar (樣式還原截圖) --- */
+        .top-bar {
+            position: absolute;
+            top: 0; left: 0; width: 100%;
+            padding: var(--safe-top) 20px 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 20;
+            pointer-events: none; /* 讓點擊穿透 */
+        }
+
+        /* 統一按鈕樣式：深棕色背景、圓角、陰影 */
+        .btn-container {
+            background-color: var(--primary-brown);
+            color: var(--text-on-brown);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto; /* 恢復可點擊 */
+            box-shadow: 0 4px 10px rgba(139, 116, 101, 0.2);
+            cursor: pointer;
+        }
+
+        /* 左側頭像 */
+        .btn-container.avatar {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            /* 這裡可以放預設頭像圖片，暫時用棕色背景 */
+            background-image: url('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80');
+            background-size: cover;
+            border: 2px solid var(--primary-brown);
+        }
+
+        /* 中間搜尋膠囊 */
+        .btn-container.search-pill {
+            height: 50px;
+            padding: 0 40px; /* 寬度拉長 */
+            border-radius: 25px;
+            font-size: 24px;
+        }
+
+        /* 右側通知/聊天 */
+        .btn-container.notification {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            font-size: 24px;
+        }
+
+        /* --- 4. Bottom Bar (樣式還原截圖) --- */
+        .bottom-bar {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%;
+            height: calc(90px + var(--safe-bottom));
+            padding-bottom: var(--safe-bottom);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-left: 40px;
+            padding-right: 40px;
+            z-index: 20;
+            /* 不需要背景色，直接透視 body 背景 */
+        }
+
+        /* 左右兩側的圖示 */
+        .icon-brown i {
+            font-size: 32px;
+            color: var(--primary-brown);
+            cursor: pointer;
+        }
+
+        /* 中間快門鍵 (雙圈設計) */
+        .shutter-btn {
+            width: 72px; height: 72px;
+            border-radius: 50%;
+            border: 4px solid var(--primary-brown); /* 外圈 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            background: transparent;
+            position: relative;
+        }
+        
+        .shutter-btn::after {
+            content: '';
+            width: 54px; height: 54px;
+            background-color: var(--primary-brown); /* 實心內圓 */
+            border-radius: 50%;
+            transition: transform 0.1s;
+        }
+        
+        .shutter-btn:active::after {
+            transform: scale(0.9);
+        }
+
+        /* --- 5. 首頁卡片 (Home Card) --- */
+        .card {
+            width: 90%;
+            height: 100%;
+            max-height: 500px;
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'); /* 模擬截圖食物照 */
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* --- 6. 個人頁面 (Profile Page) - 完全對應 image_4a8635.png --- */
+        .profile-page {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-color); /* 燕麥色 */
+            z-index: 100;
+            transform: translateX(-100%); /* 預設隱藏在左側 */
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+        .profile-page.active { transform: translateX(0); }
+
+        .back-btn {
+            position: absolute; top: 50px; left: 20px;
+            width: 40px; height: 40px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer;
+        }
+        .back-btn svg { stroke: var(--primary-brown); }
+
+        .profile-header {
+            margin-top: 60px;
+            display: flex; flex-direction: column; align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .profile-avatar {
+            width: 100px; height: 100px;
+            background-color: #FFF;
+            border-radius: 50%;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .profile-name { font-size: 24px; font-weight: bold; color: var(--primary-brown); letter-spacing: 2px; margin-bottom: 5px; }
+        .profile-email { font-size: 14px; color: #A69890; }
+
+        .profile-menu { padding: 0 40px; flex: 1; }
+        .menu-item {
+            padding: 18px 0;
+            display: flex; align-items: center;
+            color: var(--primary-brown);
+            font-size: 18px; font-weight: 500;
+            cursor: pointer;
+        }
+        .menu-item i { margin-right: 15px; font-size: 22px; }
+
+        .logout-btn {
+            margin: 20px 40px 60px 40px;
+            height: 55px;
+            background-color: #C5B6AA; /* 淺奶茶色 */
+            color: white;
+            border: none; border-radius: 16px;
+            font-size: 18px; font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* --- 其他輔助樣式 --- */
+        .loading-text { color: #A69890; font-size: 18px; font-weight: 500; letter-spacing: 1px;}
+        
+        /* 隱藏原生 input */
+        input[type="file"] { display: none; }
+        
+        /* Modal & Action Sheet (維持隱藏) */
+        .modal-backdrop, .action-sheet, .editor-page, .payment-modal { display: none; } 
+
+    </style>
 </head>
 <body>
 
     <div class="profile-page" id="profilePage">
         <div class="back-btn" id="closeProfileBtn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M15 18l-6-6 6-6" /></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M15 18l-6-6 6-6" /></svg>
         </div>
         <div class="profile-header">
             <div class="profile-avatar"></div>
-            <div class="profile-name">User</div>
-            <div class="profile-email">user@example.com</div>
+            <div class="profile-name">TTTTT</div>
+            <div class="profile-email">YYYT.gmail.com</div>
         </div>
         <div class="profile-menu">
-            <div class="menu-item"><span>My Profile</span></div>
-            <div class="menu-item" id="subscriptionBtn">
-                <span>Subscription</span>
-                <span id="vipStatusText" style="margin-left: auto; font-size: 12px; color: #8D6E63;">Free</span>
-            </div>
+            <div class="menu-item"><i class='bx bx-user'></i><span>My Profile</span></div>
+            <div class="menu-item"><i class='bx bx-bell'></i><span>Subscription</span></div>
+            <div class="menu-item"><i class='bx bx-map'></i><span>Address</span></div>
+            <div class="menu-item"><i class='bx bx-envelope'></i><span>Contact Us</span></div>
+            <div class="menu-item"><i class='bx bx-cog'></i><span>Setting</span></div>
+            <div class="menu-item"><i class='bx bx-help-circle'></i><span>Help&QA</span></div>
         </div>
         <button class="logout-btn">Log Out</button>
     </div>
 
     <div class="top-bar" id="topBar">
         <div class="btn-container avatar" id="openProfileBtn"></div>
+        
         <div class="btn-container search-pill icon-white">
-            <i class='bx bx-search' style="font-size: 20px;"></i>
+            <i class='bx bx-user-plus'></i> 
         </div>
+        
         <div class="btn-container notification icon-white">
-            <i class='bx bx-bell' style="font-size: 20px;"></i>
+            <i class='bx bx-message-rounded-dots'></i>
         </div>
     </div>
 
     <div class="carousel-track" id="track">
 
         <div class="page-container" id="page-memory">
-            <div class="loading-text">Loading Memory...</div>
+            <div class="loading-text">Memories</div>
         </div>
 
         <div class="page-container" id="page-home">
             <div class="card">
-                <div class="date-display" id="dateDisplay">
-                    <span id="dateText">Today</span>
                 </div>
-            </div>
         </div>
 
         <div class="page-container" id="page-community">
-            <div class="page-content-wrapper" style="height: 100%; display: flex; flex-direction: column;">
-                <div style="padding: 20px 15px 10px 15px; background-color: #F2EBE0; z-index: 10;">
-                    <h2 style="color: #5D4037; font-size: 24px; font-weight: 700; margin: 0;">Community</h2>
-                    <p style="color: #8D6E63; font-size: 12px; margin: 5px 0 0 0;">Discover VIP moments</p>
-                </div>
-                <div id="feedContainer" style="flex: 1; overflow-y: auto; padding-bottom: 100px;">
-                    <div style="text-align: center; margin-top: 50px; color: #8D6E63;">Loading...</div>
-                </div>
-            </div>
+             <div class="loading-text">Community</div>
         </div>
 
     </div>
 
     <div class="bottom-bar" id="bottomBar">
-        <div class="btn-container icon-brown"><i class='bx bx-map-alt' style="font-size: 24px;"></i></div>
-        <div class="btn-container shutter-btn" id="shutterBtn"></div>
-        <div class="btn-container icon-brown" id="editBtn"><i class='bx bx-edit' style="font-size: 24px;"></i></div>
+        <div class="icon-brown"><i class='bx bx-search'></i></div>
+        
+        <div class="shutter-btn" id="shutterBtn"></div>
+        
+        <div class="icon-brown" id="editBtn"><i class='bx bx-edit-alt'></i></div>
     </div>
 
-    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
-    <input type="file" id="multiPhotoInput" accept="image/*" multiple style="display: none;">
-    <input type="file" id="albumInput" accept="image/*" multiple style="display: none;">
+    <input type="file" id="cameraInput" accept="image/*" capture="environment">
+    <input type="file" id="multiPhotoInput" accept="image/*" multiple>
+    <input type="file" id="albumInput" accept="image/*" multiple>
 
-    <div class="modal-backdrop" id="backdrop"></div>
-    <div class="action-sheet" id="actionSheet">
-        <div class="sheet-handle-area"><div class="sheet-handle"></div></div>
-        <div class="sheet-option" id="takePhotoBtn"><span>Camera</span></div>
-        <div class="sheet-option" id="chooseAlbumBtn"><span>Album</span></div>
-    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- 1. 核心滑動邏輯 ---
+            const track = document.getElementById('track');
+            let currentPage = 1; // 0=Memory, 1=Home(首頁), 2=Community
+            let startX = 0;
+            let isDragging = false;
+            const threshold = 80; // 滑動多少距離才換頁
 
-    <div class="editor-page" id="editorPage">
-        <div class="editor-header">
-            <span class="header-btn" id="cancelEditBtn">Back</span>
-            <span class="header-title">Post</span>
-            <span class="header-btn next-btn" id="publishBtn">Finish</span>
-        </div>
-        <div class="preview-area" id="editorPreview"></div>
-        <div class="editor-tools-bar">
-            <div class="tool-capsule" id="tagPeopleBtn">Tag People</div>
-            <div class="tool-capsule" id="tagLocationBtn">Location <span id="locationText"></span></div>
-            <div class="tool-capsule right" id="multiSelectBtn">Multiple</div>
-        </div>
-        <div class="gallery-grid" id="editorGrid"></div>
-    </div>
+            // 初始化：定位在中間 (Home)
+            updateCarousel();
 
-    <div class="payment-modal" id="paymentModal">
-        <div class="payment-close" id="closePaymentBtn">&times;</div>
-        <div class="payment-header"><div class="payment-title">Subscribe to Premium</div><div class="payment-price">NT.99.00</div></div>
-        <div class="pay-btn" id="confirmPayBtn">Confirm Pay</div>
-    </div>
+            // 觸控事件監聽
+            track.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                isDragging = true;
+                track.style.transition = 'none'; // 拖曳時移除動畫，跟隨手指
+            });
 
-    <script src="main.js"></script>
+            track.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                const currentX = e.touches[0].clientX;
+                const diff = currentX - startX;
+                const windowWidth = window.innerWidth;
+                
+                // 計算位移 (Base: -100% * page)
+                const baseTranslate = -currentPage * windowWidth;
+                
+                // 增加邊界阻力
+                if ((currentPage === 0 && diff > 0) || (currentPage === 2 && diff < 0)) {
+                    track.style.transform = `translateX(${baseTranslate + (diff / 3)}px)`;
+                } else {
+                    track.style.transform = `translateX(${baseTranslate + diff}px)`;
+                }
+            });
+
+            track.addEventListener('touchend', (e) => {
+                isDragging = false;
+                const endX = e.changedTouches[0].clientX;
+                const diff = endX - startX;
+                
+                // 加回動畫
+                track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+
+                // 判斷換頁
+                if (diff < -threshold && currentPage < 2) {
+                    currentPage++; // 下一頁
+                } else if (diff > threshold && currentPage > 0) {
+                    currentPage--; // 上一頁
+                }
+
+                updateCarousel();
+            });
+
+            function updateCarousel() {
+                const percentage = -(currentPage * 33.3333);
+                track.style.transform = `translateX(${percentage}%)`;
+            }
+
+            // --- 2. Profile 頁面開關邏輯 ---
+            const profilePage = document.getElementById('profilePage');
+            const openProfileBtn = document.getElementById('openProfileBtn');
+            const closeProfileBtn = document.getElementById('closeProfileBtn');
+
+            openProfileBtn.addEventListener('click', () => {
+                profilePage.classList.add('active');
+            });
+
+            closeProfileBtn.addEventListener('click', () => {
+                profilePage.classList.remove('active');
+            });
+
+            // --- 3. 快門按鈕點擊效果 ---
+            const shutterBtn = document.getElementById('shutterBtn');
+            shutterBtn.addEventListener('click', () => {
+                // 簡單的點擊反饋
+                shutterBtn.style.transform = "scale(0.95)";
+                setTimeout(() => shutterBtn.style.transform = "scale(1)", 100);
+                console.log("Shutter clicked");
+            });
+        });
+    </script>
 </body>
 </html>
