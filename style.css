@@ -159,3 +159,63 @@ svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .gallery-add-btn { width: 100%; aspect-ratio: 1/1; background-color: #EFEBE9; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; border: 2px dashed #8D6E63; color: #8D6E63; font-weight: bold; font-size: 14px; pointer-events: auto; }
 .gallery-add-btn svg { width: 30px; height: 30px; margin-bottom: 5px; stroke: #8D6E63; }
 .preview-placeholder { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; color: #999; font-size: 16px; background-color: #f0f0f0; }
+
+/* style.css (新增付款頁面與 VIP 樣式) */
+
+/* 1. 訂閱按鈕旁的鈴鐺 - VIP 狀態 */
+.menu-item .vip-bell {
+    margin-right: 10px;
+    width: 24px; height: 24px;
+    stroke: #8D6E63; /* 預設褐色 */
+    transition: all 0.3s ease;
+}
+
+/* 關鍵：當加上 active class 時變紅色實心 */
+.menu-item .vip-bell.active {
+    fill: #ED4956;
+    stroke: #ED4956;
+    filter: drop-shadow(0 0 5px rgba(237, 73, 86, 0.5));
+}
+
+/* 2. 付款視窗 (仿照您的截圖設計) */
+.payment-modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #EFEBE9; /* 米色背景 */
+    z-index: 2000; /* 最高層級 */
+    display: flex; flex-direction: column;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.payment-modal.active { transform: translateY(0); }
+
+.payment-header {
+    background-color: #D7CCC8; /* 深米色頂部 */
+    padding: 60px 20px 20px 20px;
+    color: white;
+}
+.payment-title { font-size: 14px; opacity: 0.9; margin-bottom: 5px; }
+.payment-price { font-size: 36px; font-weight: bold; margin-bottom: 20px; }
+.payment-summary { display: flex; justify-content: space-between; font-size: 14px; opacity: 0.9; }
+
+.payment-form { padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 15px; }
+.input-group { background: white; padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.input-label { font-size: 12px; color: #8D6E63; font-weight: bold; margin-bottom: 5px; display: block; }
+.input-field { width: 100%; border: none; outline: none; font-size: 16px; color: #333; background: transparent; }
+
+.card-row { display: flex; gap: 10px; }
+.card-row .input-group { flex: 1; }
+
+.pay-btn {
+    margin-top: auto; margin-bottom: 30px;
+    background-color: #D7CCC8; color: white;
+    height: 50px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: bold; cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transition: background 0.2s;
+}
+.pay-btn:active { transform: scale(0.98); background-color: #8D6E63; }
+
+.payment-close {
+    position: absolute; top: 50px; right: 20px;
+    color: white; font-size: 24px; font-weight: bold; cursor: pointer;
+}
