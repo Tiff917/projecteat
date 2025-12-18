@@ -315,11 +315,7 @@ if(publishBtn) {
 }
 
 // ==========================================
-// 6. 社群頁面
-// ==========================================
-
-// ==========================================
-// 6. 社群頁面渲染 (仿 Instagram 風格)
+// 6. 社群頁面渲染 (仿 Instagram 風格 + 假資料)
 // ==========================================
 function renderCommunity() {
     const container = document.getElementById('feedContainer');
@@ -329,45 +325,24 @@ function renderCommunity() {
     const req = tx.objectStore(STORE_POSTS).getAll();
 
     req.onsuccess = (e) => {
-        const posts = e.target.result;
-        container.innerHTML = ''; // 清空容器
+        let posts = e.target.result;
+        container.innerHTML = ''; 
 
+        // 🔥 這裡有假資料邏輯
         if(posts.length === 0) {
-            container.innerHTML = `
-                <div style="text-align: center; margin-top: 100px; color: #8D6E63;">
-                    <i class='bx bx-camera' style="font-size: 48px; margin-bottom: 10px;"></i><br>
-                    No posts yet.<br>Become a VIP to share your moments!
-                </div>`;
-            return;
+            posts = [
+                {
+                    user: "Foodie_Alex", location: "Tokyo, Japan", likes: 120, caption: "Delicious ramen! 🍜",
+                    fakeImage: "https://images.unsplash.com/photo-1569937724357-19506772436f?w=600&q=80"
+                },
+                // ... 其他假貼文 ...
+            ];
+        } else {
+            posts.sort((a,b) => b.timestamp - a.timestamp);
         }
 
-        // 依照時間倒序排列 (最新的在最上面)
-        posts.sort((a,b) => b.timestamp - a.timestamp);
-
         posts.forEach(post => {
-            // 處理圖片 (單張或多張)
-            const images = post.images || [post.imageBlob];
-            let slidesHtml = '';
-            
-            if (images && images.length > 0) {
-                images.forEach(blob => {
-                    if(blob) {
-                        const url = URL.createObjectURL(blob);
-                        slidesHtml += `<div class="feed-image" style="background-image: url('${url}')"></div>`;
-                    }
-                });
-            }
-
-            // 多圖顯示計數器 (例如 1/3)
-            const counterHtml = images.length > 1 
-                ? `<div class="feed-counter">1/${images.length}</div>` 
-                : '';
-
-            // 建立卡片元素
-            const card = document.createElement('div');
-            card.className = 'feed-card';
-            
-            // 🔥 HTML 結構：仿 Instagram
+            // 🔥 HTML 結構是仿 IG 的
             card.innerHTML = `
                 <div class="feed-header">
                     <div class="feed-user-info">
@@ -375,61 +350,8 @@ function renderCommunity() {
                         <div>
                             <div class="feed-username">
                                 ${post.user} 
-                                <i class='bx bxs-bell-ring' style="color: #ED4956; font-size: 14px;"></i>
+                                ${post.isVIP ? "<i class='bx bxs-bell-ring' style='color: #ED4956; font-size: 14px; margin-left:5px;'></i>" : ""}
                             </div>
-                            <div class="feed-location">${post.location || 'Unknown Location'}</div>
-                        </div>
-                    </div>
-                    <i class='bx bx-dots-horizontal-rounded' style="font-size: 24px; color: #333;"></i>
-                </div>
-                
-                <div style="position: relative;">
-                    <div class="feed-carousel" onscroll="updateCounter(this)">
-                        ${slidesHtml}
-                    </div>
-                    ${counterHtml}
-                </div>
-
-                <div class="feed-actions">
-                    <svg class="action-icon like-btn" viewBox="0 0 24 24">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                    </svg>
-                    
-                    <svg class="action-icon comment-btn" viewBox="0 0 24 24">
-                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-                    </svg>
-                    
-                    <i class='bx bx-send' style="font-size: 26px; margin-left: auto;"></i>
-                </div>
-
-                <div class="feed-likes">
-                    Liked by <b>craig_love</b> and <b>${(post.likes || 0) + 44686} others</b>
-                </div>
-
-                <div class="feed-caption">
-                    <span class="caption-username">${post.user}</span> 
-                    ${post.caption || ''}
-                </div>
-                
-                <div class="view-comments">View all 12 comments</div>
-            `;
-
-            // 🔥 綁定愛心點擊事件
-            const likeBtn = card.querySelector('.like-btn');
-            likeBtn.addEventListener('click', function() {
-                // 切換 liked class (CSS 會處理變紅與動畫)
-                this.classList.toggle('liked');
-            });
-
-            // 綁定留言按鈕 (打開留言板)
-            const commentBtns = card.querySelectorAll('.comment-btn, .view-comments');
-            commentBtns.forEach(btn => btn.onclick = () => openCommentSheet(post));
-
-            container.appendChild(card);
-        });
-    };
-}
-
 // 輔助函式：更新多圖計數器 (例如滑到第2張時變 2/3)
 window.updateCounter = function(carousel) {
     const width = carousel.offsetWidth;
