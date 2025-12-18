@@ -6,11 +6,11 @@
     <title>Onboarding - Gourmet App</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <style>
-        /* 1. 基礎設定 (延續 Morandi 風格) */
+        /* 1. 基礎設定 */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
         body {
-            background-color: #E3D5CA; /* 電腦版背景 */
+            background-color: #E3D5CA; 
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -22,28 +22,23 @@
         .onboarding-card {
             width: 100%;
             max-width: 400px;
-            background-color: #F5EBE1; /* 手機介面底色 */
+            background-color: #F5EBE1;
             border-radius: 30px;
             padding: 40px 30px;
             box-shadow: 0 15px 35px rgba(109, 93, 85, 0.15);
             display: flex;
             flex-direction: column;
             align-items: center;
-            height: 90vh; /* 固定高度以維持佈局 */
+            height: 90vh;
             position: relative;
             overflow: hidden;
         }
 
-        /* 手機版滿版 */
         @media screen and (max-width: 480px) {
             body { padding: 0; background-color: #F5EBE1; align-items: flex-start; }
             .onboarding-card { 
-                max-width: 100%; 
-                min-height: 100vh; 
-                border-radius: 0; 
-                box-shadow: none; 
-                padding-top: 60px; /* 避開狀態列 */
-                padding-bottom: 40px;
+                max-width: 100%; min-height: 100vh; border-radius: 0; box-shadow: none; 
+                padding-top: 60px; padding-bottom: 40px;
             }
         }
 
@@ -51,44 +46,51 @@
         .header { text-align: center; margin-bottom: 40px; margin-top: 20px; }
         .header h1 { font-size: 20px; font-weight: 500; color: #6D5D55; line-height: 1.4; letter-spacing: 0.5px; }
         
-        /* 4. 選項區域 (左右分割) */
+        /* 4. 選項區域 */
         .options-container {
             display: flex;
             gap: 15px;
             width: 100%;
             flex: 1; /* 佔據剩餘空間 */
-            max-height: 300px; /* 限制選項高度，模仿截圖 */
-            margin-bottom: 40px;
+            max-height: 300px;
+            margin-bottom: 20px; /* 縮小與下方的距離 */
         }
 
         .option-btn {
             flex: 1;
-            border-radius: 4px; /* 方正帶小圓角 */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-size: 18px;
-            font-weight: 500;
-            color: #5D4037;
-            cursor: pointer;
-            transition: all 0.2s;
-            position: relative;
-            /* 預設無邊框 */
-            border: 3px solid transparent; 
+            border-radius: 4px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            font-size: 18px; font-weight: 500; color: #5D4037;
+            cursor: pointer; transition: all 0.2s;
+            position: relative; border: 3px solid transparent; 
         }
 
-        /* 左邊選項 (灰色) */
         .option-left { background-color: #BDBdbd; color: #4a4a4a; }
-        
-        /* 右邊選項 (米色) */
         .option-right { background-color: #D3C4B6; color: #5D4037; }
 
-        /* 選中狀態 */
         .option-btn.selected {
-            border-color: #6D5D55; /* 選中時顯示深色邊框 */
-            transform: scale(0.98);
+            border-color: #6D5D55; transform: scale(0.98);
             box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* 🔥🔥 進度條 (圖形化，非數字) 🔥🔥 */
+        .progress-dots {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px; /* 與按鈕的距離 */
+            margin-top: auto; /* 推到最底部 (但在按鈕上面) */
+        }
+        
+        .dot {
+            width: 8px; height: 8px;
+            background-color: #D6CCC2; /* 未完成顏色 */
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .dot.active {
+            background-color: #8D6E63; /* 當前/完成顏色 */
+            transform: scale(1.2);
         }
 
         /* 5. 底部打勾按鈕 */
@@ -98,21 +100,13 @@
             background-color: #C4B5A8;
             border-radius: 10px;
             border: none;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: flex; justify-content: center; align-items: center;
             cursor: pointer;
-            margin-top: auto; /* 推到底部 */
             transition: background 0.2s;
+            /* 移除原本的 margin-top: auto，因為進度條已經推下來了 */
         }
         .confirm-btn:active { background-color: #a8998e; }
         .confirm-btn i { font-size: 24px; color: white; }
-
-        /* 進度條 (可選，讓使用者知道還剩多少) */
-        .progress-indicator {
-            position: absolute; top: 20px; right: 20px;
-            font-size: 12px; color: #9c8e87;
-        }
 
         /* 動畫效果 */
         .fade-in { animation: fadeIn 0.4s ease-in-out; }
@@ -126,8 +120,7 @@
 <body>
 
     <div class="onboarding-card">
-        <div class="progress-indicator" id="progressText">1/6</div>
-
+        
         <div class="header">
             <h1>Make us KNOW<br>you more</h1>
         </div>
@@ -137,13 +130,15 @@
             <div class="option-btn option-right" onclick="selectOption(1)">麵</div>
         </div>
 
+        <div class="progress-dots" id="progressDots">
+            </div>
+
         <button class="confirm-btn" id="nextBtn">
             <i class='bx bx-check'></i>
         </button>
     </div>
 
     <script>
-        // 題目資料 (依照您的截圖設定)
         const questions = [
             { left: "飯", right: "麵" },
             { left: "葷食", right: "素食" },
@@ -154,80 +149,76 @@
         ];
 
         let currentStep = 0;
-        let userPreferences = []; // 儲存使用者的選擇
-        let currentSelection = null; // 當前這題選了什麼 (0:左, 1:右)
+        let userPreferences = [];
+        let currentSelection = null;
 
         const optionsContainer = document.getElementById('optionsContainer');
         const nextBtn = document.getElementById('nextBtn');
-        const progressText = document.getElementById('progressText');
+        const progressDots = document.getElementById('progressDots');
 
-        // 渲染題目函式
+        // 初始化進度點
+        function initDots() {
+            progressDots.innerHTML = '';
+            questions.forEach((_, i) => {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                if (i === 0) dot.classList.add('active');
+                progressDots.appendChild(dot);
+            });
+        }
+
         function renderQuestion(index) {
-            // 更新進度文字
-            progressText.textContent = `${index + 1}/${questions.length}`;
+            // 更新進度點樣式
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, i) => {
+                // 已完成或當前題目變深色
+                if (i <= index) dot.classList.add('active');
+                else dot.classList.remove('active');
+            });
             
-            // 重置選擇
             currentSelection = null;
-
-            // 取得題目內容
             const q = questions[index];
 
-            // 重新產生 HTML (加上動畫 class)
             optionsContainer.innerHTML = `
                 <div class="option-btn option-left" onclick="selectOption(0)">${q.left}</div>
                 <div class="option-btn option-right" onclick="selectOption(1)">${q.right}</div>
             `;
             
-            // 觸發重繪以播放動畫
             optionsContainer.classList.remove('fade-in');
-            void optionsContainer.offsetWidth; // 強制重繪
+            void optionsContainer.offsetWidth;
             optionsContainer.classList.add('fade-in');
         }
 
-        // 選擇選項函式
         window.selectOption = function(side) {
             currentSelection = side;
             const btns = optionsContainer.querySelectorAll('.option-btn');
-            
-            // 移除所有 selected 樣式
             btns.forEach(btn => btn.classList.remove('selected'));
-            
-            // 加上 selected 樣式
             btns[side].classList.add('selected');
         }
 
-        // 下一題按鈕邏輯
         nextBtn.addEventListener('click', () => {
             if (currentSelection === null) {
-                alert("請選擇一個選項 Please select an option.");
+                alert("Please select an option.");
                 return;
             }
 
-            // 儲存選擇 (可選：之後可以傳到後端或存 localStorage)
             userPreferences.push(currentSelection === 0 ? questions[currentStep].left : questions[currentStep].right);
-
-            // 進入下一題
             currentStep++;
 
             if (currentStep < questions.length) {
                 renderQuestion(currentStep);
             } else {
-                // 🔥 全部做完，進入主頁
                 finishOnboarding();
             }
         });
 
         function finishOnboarding() {
-            // 儲存偏好到 localStorage (選用)
             localStorage.setItem('userPrefs', JSON.stringify(userPreferences));
-            // 確保已登入狀態
             localStorage.setItem('isLoggedIn', 'true');
-            
-            // 跳轉主頁
             window.location.href = 'home.html';
         }
 
-        // 初始化：渲染第一題
+        initDots();
         renderQuestion(0);
 
     </script>
