@@ -6,11 +6,13 @@ const topBar = document.getElementById('topBar');
 const bottomBar = document.getElementById('bottomBar');
 const card = document.querySelector('.card');
 
-const isVIP = true; 
+// 🔥 核心修改：從 localStorage 讀取 VIP 狀態
+// 如果 localStorage 裡面有 'isVIP' 且為 'true'，則 isVIP = true
+let isVIP = localStorage.getItem('isVIP') === 'true';
 
-// 🔥 資料庫強制升級 v17 (確保可以存多圖)
+// 資料庫設定
 let db;
-const DB_NAME = 'GourmetApp_Final_v17'; 
+const DB_NAME = 'GourmetApp_Final_v18'; 
 const STORE_PHOTOS = 'photos';
 const STORE_POSTS = 'posts';
 const DB_VERSION = 1;
@@ -19,14 +21,13 @@ let currentPage = 1;
 let startX = 0, currentTranslate = -33.333, isDragging = false, startTranslate = 0;
 let displayDate = new Date();
 
-// 編輯器狀態
-let finalFiles = []; // ⚠️ 累積選取的照片陣列
+let currentEditFiles = [];
 let currentEditLocation = null;
 let currentEditTagged = false;
-let isMultiSelectMode = false; // 多選開關
+let isMultiSelectMode = false; 
 
 // ==========================================
-// 2. 初始化資料庫
+// 2. 初始化資料庫與 UI
 // ==========================================
 function initDB() {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -40,12 +41,26 @@ function initDB() {
     };
     request.onsuccess = (e) => {
         db = e.target.result;
-        console.log("資料庫連線成功 (v17)");
         renderCalendar();
-        renderCommunity(); 
+        renderCommunity();
+        updateVipUI(); // 🚀 初始化時更新鈴鐺顏色
     };
 }
 initDB();
+
+// 🚀 更新 VIP 介面函式 (鈴鐺變色)
+function updateVipUI() {
+    const bell = document.getElementById('vipBellIcon');
+    const statusText = document.getElementById('vipStatusText');
+    
+    if (isVIP) {
+        if(bell) bell.classList.add('active'); // CSS 控制變紅
+        if(statusText) statusText.textContent = "Premium";
+    } else {
+        if(bell) bell.classList.remove('active');
+        if(statusText) statusText.textContent = "Free";
+    }
+}
 
 // ==========================================
 // 3. 載入頁面
@@ -67,7 +82,67 @@ async function loadExternalPages() {
 loadExternalPages();
 
 // ==========================================
-// 4. 編輯器邏輯 (支援多選累加)
+// 4. 付款與訂閱邏輯 (新增)
+// ==========================================
+const subscriptionBtn = document.getElementById('subscriptionBtn');
+const paymentModal = document.getElementById('paymentModal');
+const closePaymentBtn = document.getElementById('closePaymentBtn');
+const confirmPayBtn = document.getElementById('confirmPayBtn');
+
+// 打開付款視窗
+if(subscriptionBtn) {
+    subscriptionBtn.addEventListener('click', () => {
+        if(isVIP) {
+            alert("您已經是尊榮 Premium 會員！");
+        } else {
+            // 關閉個人頁面，打開付款頁面
+            document.getElementById('profilePage').classList.remove('active');
+            paymentModal.classList.add('active');
+        }
+    });
+}
+
+// 關閉付款視窗
+if(closePaymentBtn) {
+    closePaymentBtn.addEventListener('click', () => {
+        paymentModal.classList.remove('active');
+    });
+}
+
+// 確認付款 (模擬流程)
+if(confirmPayBtn) {
+    confirmPayBtn.addEventListener('click', () => {
+        // 1. 按鈕變更狀態
+        const originalText = confirmPayBtn.textContent;
+        confirmPayBtn.textContent = "Processing...";
+        confirmPayBtn.style.backgroundColor = "#aaa";
+        confirmPayBtn.style.pointerEvents = "none";
+
+        // 2. 模擬網路延遲 1.5 秒
+        setTimeout(() => {
+            // 3. 付款成功
+            isVIP = true;
+            localStorage.setItem('isVIP', 'true'); // 寫入瀏覽器記憶體
+            
+            updateVipUI(); // 讓鈴鐺變紅
+            
+            alert("付款成功！歡迎成為 Premium 會員 🎉");
+            
+            // 4. 恢復介面
+            paymentModal.classList.remove('active');
+            confirmPayBtn.textContent = originalText;
+            confirmPayBtn.style.backgroundColor = "";
+            confirmPayBtn.style.pointerEvents = "auto";
+            
+            // 5. 重新渲染社群 (解鎖功能)
+            renderCommunity();
+            
+        }, 1500);
+    });
+}
+
+// ==========================================
+// 5. 編輯器邏輯
 // ==========================================
 const editBtn = document.getElementById('editBtn');
 const editorPage = document.getElementById('editorPage');
@@ -80,11 +155,9 @@ const multiSelectBtn = document.getElementById('multiSelectBtn');
 const publishBtn = document.getElementById('publishBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 
-// A. 進入編輯器
 if(editBtn) {
     editBtn.addEventListener('click', () => {
-        // 重置狀態
-        finalFiles = []; 
+        currentEditFiles = [];
         currentEditLocation = null;
         currentEditTagged = false;
         isMultiSelectMode = false;
@@ -102,7 +175,6 @@ if(editBtn) {
     });
 }
 
-// B. 多選開關
 if(multiSelectBtn) {
     multiSelectBtn.addEventListener('click', () => {
         isMultiSelectMode = !isMultiSelectMode;
@@ -111,18 +183,15 @@ if(multiSelectBtn) {
     });
 }
 
-// C. 渲染編輯器格子 (含 + 按鈕)
 function renderEditorGrid() {
     editorGrid.innerHTML = '';
     
-    // 如果有選圖，大圖顯示最後一張
     if(finalFiles.length > 0) {
         const lastFile = finalFiles[finalFiles.length - 1];
         editorPreview.innerHTML = '';
         editorPreview.style.backgroundImage = `url('${URL.createObjectURL(lastFile)}')`;
     }
 
-    // 建立 "+" 按鈕 (使用 Label 觸發 Input)
     const addBtn = document.createElement('div');
     addBtn.className = 'gallery-add-btn';
     addBtn.innerHTML = `
@@ -132,7 +201,6 @@ function renderEditorGrid() {
     `;
     editorGrid.appendChild(addBtn);
 
-    // 顯示已選縮圖
     finalFiles.forEach(file => {
         const div = document.createElement('div');
         div.className = 'gallery-item';
@@ -142,7 +210,6 @@ function renderEditorGrid() {
         editorGrid.appendChild(div);
     });
 
-    // 補空白格
     for(let i=0; i< (7 - finalFiles.length); i++) {
         const dummy = document.createElement('div');
         dummy.className = 'gallery-item';
@@ -151,22 +218,18 @@ function renderEditorGrid() {
     }
 }
 
-// D. 選圖監聽
 if(multiPhotoInput) {
     multiPhotoInput.addEventListener('change', (e) => {
         if(e.target.files.length > 0) {
             const newFiles = Array.from(e.target.files);
-            // 如果多選開啟 -> 累加；否則 -> 覆蓋
             if(isMultiSelectMode) finalFiles = [...finalFiles, ...newFiles];
             else finalFiles = newFiles;
-            
             renderEditorGrid();
         }
-        e.target.value = ''; // 清空以允許重複選
+        e.target.value = '';
     });
 }
 
-// 其他按鈕
 if(tagPeopleBtn) {
     tagPeopleBtn.addEventListener('click', () => {
         if(isVIP) {
@@ -174,7 +237,7 @@ if(tagPeopleBtn) {
             tagPeopleBtn.classList.toggle('active', currentEditTagged);
             alert(currentEditTagged ? "已標註朋友！" : "取消標註");
         } else {
-            alert("🔒 這是付費會員專屬功能！");
+            alert("🔒 這是付費會員專屬功能！\n請至個人頁面訂閱 Premium。");
         }
     });
 }
@@ -194,7 +257,6 @@ if(tagLocationBtn) {
 
 if(cancelEditBtn) cancelEditBtn.addEventListener('click', () => editorPage.classList.remove('active'));
 
-// F. ⚠️ 發佈貼文 (將 finalFiles 存入資料庫)
 if(publishBtn) {
     publishBtn.addEventListener('click', () => {
         if(finalFiles.length === 0) {
@@ -210,20 +272,18 @@ if(publishBtn) {
         const memoryStore = tx.objectStore(STORE_PHOTOS);
         const postStore = tx.objectStore(STORE_POSTS);
 
-        // 1. 存入 Memory (單張單張存)
         finalFiles.forEach((file, index) => {
             memoryStore.add({
                 date: todayStr, time: timeStr, imageBlob: file, timestamp: now.getTime() + index
             });
         });
 
-        // 2. 存入社群 (存整個陣列)
         if(isVIP) {
             postStore.add({
                 user: "My Account",
                 avatar: "",
                 location: currentEditLocation || "Unknown",
-                images: finalFiles, // ⚠️ 這裡存入所有選取的照片
+                images: finalFiles, 
                 likes: 0,
                 caption: currentEditTagged ? "With friends! ❤️" : "New post ✨",
                 timestamp: now.getTime(),
@@ -232,11 +292,10 @@ if(publishBtn) {
         }
 
         tx.oncomplete = () => {
-            alert("發佈成功！");
+            alert(isVIP ? "發佈成功！" : "已存入回憶！(升級 VIP 可分享至社群)");
             editorPage.classList.remove('active');
             renderCalendar();
             if(isVIP) renderCommunity();
-            // 更新首頁
             if(card && finalFiles.length > 0) {
                 card.style.backgroundImage = `url('${URL.createObjectURL(finalFiles[0])}')`;
             }
@@ -245,7 +304,7 @@ if(publishBtn) {
 }
 
 // ==========================================
-// 5. 社群頁面渲染 (輪播)
+// 6. 社群頁面
 // ==========================================
 function renderCommunity() {
     const container = document.getElementById('feedContainer');
@@ -266,11 +325,8 @@ function renderCommunity() {
         posts.sort((a,b) => b.timestamp - a.timestamp);
 
         posts.forEach(post => {
-            // 讀取圖片陣列
             const images = post.images || [post.imageBlob];
             let slidesHtml = '';
-            
-            // 產生每張圖片的 HTML
             if (images && images.length > 0) {
                 images.forEach(blob => {
                     if(blob) {
@@ -309,7 +365,6 @@ function renderCommunity() {
                 <div style="padding:0 15px 15px 15px; color:#999; font-size:13px; cursor:pointer;" class="comment-btn">View all comments...</div>
             `;
 
-            // 綁定事件
             card.querySelector('.like-btn').onclick = function() { this.classList.toggle('liked'); };
             const commentBtns = card.querySelectorAll('.comment-btn');
             commentBtns.forEach(btn => btn.onclick = () => openCommentSheet(post));
@@ -319,7 +374,6 @@ function renderCommunity() {
     };
 }
 
-// 留言板與 Story 相關函式 (全域)
 function openCommentSheet(post) {
     let sheet = document.getElementById('commentSheet');
     if(!sheet) {
@@ -328,7 +382,6 @@ function openCommentSheet(post) {
         bd.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:500;opacity:0;pointer-events:none;transition:opacity 0.3s;';
         document.body.appendChild(bd);
         
-        // 綁定 window.sendComment
         sheet.innerHTML = `
             <div class="comment-header">Comments <div class="close-comment-btn">&times;</div></div>
             <div class="comment-list" id="commentList"></div>
@@ -345,11 +398,13 @@ function openCommentSheet(post) {
     }
 
     const list = document.getElementById('commentList'); list.innerHTML = '';
+    
     if(post.caption) {
         const item = document.createElement('div'); item.className='comment-item';
         item.innerHTML = `<div class="comment-avatar"></div><div class="comment-content"><span class="comment-user">${post.user}</span> ${post.caption}<div class="comment-time">1h</div></div>`;
         list.appendChild(item);
     }
+
     const bd = document.getElementById('commentBackdrop');
     setTimeout(() => { bd.style.opacity='1'; bd.style.pointerEvents='auto'; sheet.classList.add('active'); }, 10);
 }
@@ -371,9 +426,6 @@ window.updateCounter = function(carousel) {
     if (counter) counter.textContent = `${idx}/${carousel.children.length}`;
 };
 
-// ==========================================
-// 6. 其他 (保持不變)
-// ==========================================
 async function renderCalendar() {
     const container = document.getElementById('calendarDays');
     if (!container) return;
@@ -516,20 +568,16 @@ track.addEventListener('mousedown', startDrag);
 track.addEventListener('touchstart', startDrag);
 
 function startDrag(e) { 
-    // ⚠️ 關鍵修正：檢查點擊目標
-    // 如果手指點在「貼文輪播」或是「留言板」上，就不要啟動大頁面滑動
     if (e.target.closest('.feed-carousel') || e.target.closest('.comment-sheet')) {
-        isDragging = false;
-        return; // 直接結束，把滑動權限還給瀏覽器 (這樣照片才能滑！)
+        isDragging = false; return;
     }
-
-    isDragging = true; 
-    isHorizontalMove = false; 
+    isDragging = true; isHorizontalMove = false; 
     startX = e.pageX || e.touches[0].clientX; 
     startY = e.pageY || e.touches[0].clientY;
     startTranslate = -currentPage * 33.333; 
     track.style.transition = 'none';
 }
+
 window.addEventListener('mousemove', moveDrag);
 window.addEventListener('touchmove', moveDrag, {passive: false});
 
@@ -580,6 +628,9 @@ function updateCarousel() {
     if(bottomBar) bottomBar.style.opacity = isHome ? 1 : 0;
 }
 
-if(openProfileBtn) openProfileBtn.addEventListener('click', () => profilePage.classList.add('active'));
-if(closeProfileBtn) closeProfileBtn.addEventListener('click', () => profilePage.classList.remove('active'));
-if(logoutBtn) logoutBtn.addEventListener('click', () => alert('Log out'));
+if(document.getElementById('openProfileBtn')) document.getElementById('openProfileBtn').addEventListener('click', () => document.getElementById('profilePage').classList.add('active'));
+if(document.getElementById('closeProfileBtn')) document.getElementById('closeProfileBtn').addEventListener('click', () => document.getElementById('profilePage').classList.remove('active'));
+if(document.querySelector('.logout-btn')) document.querySelector('.logout-btn').addEventListener('click', () => {
+    localStorage.removeItem('isVIP');
+    window.location.reload();
+});
