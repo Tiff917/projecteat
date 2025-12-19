@@ -1,15 +1,275 @@
-/* =========================================
-   1. 全局設定 (Reset & Variables)
-   ========================================= */
+/* --- 1. 基礎設定 --- */
 * {
-    margin: 0;
-    padding: 0;
     box-sizing: border-box;
+    margin: 0; padding: 0;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
 }
 
+:root {
+    --bg-color: #F2EBE0;       
+    --primary-brown: #8D6E63;  
+    --text-dark: #5D4037;
+}
+
+body {
+    background-color: var(--bg-color);
+    width: 100vw; height: 100vh;
+    overflow: hidden; /* 禁止瀏覽器預設捲動 */
+    position: fixed; /* 鎖定畫面 */
+}
+
+/* --- 2. 滑動軌道 (核心) --- */
+.carousel-track {
+    display: flex;
+    width: 300%; /* 三個頁面寬 */
+    height: 100%;
+    transform: translateX(-33.333%); /* 初始位置在中間 */
+    will-change: transform; /* 效能優化 */
+}
+
+.page-container {
+    width: 33.333%; height: 100%;
+    flex-shrink: 0;
+    position: relative;
+    display: flex; flex-direction: column; 
+    align-items: center; justify-content: center;
+    overflow-y: auto; /* 內容長可捲動 */
+}
+
+/* 用於外部載入內容的包覆層 */
+.page-content-wrapper {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center;
+    padding-top: 100px; /* 避開 Top Bar */
+}
+
+.loading-text { color: #aaa; font-size: 14px; }
+
+/* --- 3. Home Card --- */
+.card {
+    /* 1. 設定寬度 */
+    width: 85vw; 
+    max-width: 400px;
+    
+    /* 2. 👇 關鍵修改：強制變成正方形 */
+    /* 使用 aspect-ratio: 1/1 是最現代的寫法，寬高自動相等 */
+    aspect-ratio: 1 / 1;
+    height: auto;   /* 覆蓋掉原本的 height 設定 */
+    min-height: 0;  /* 清除原本的限制 */
+    max-height: none;
+
+    /* 其他樣式保持不變 */
+    background-color: #ddd; 
+    border-radius: 35px;
+    background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80');
+    background-size: cover; 
+    background-position: center;
+    box-shadow: 0 15px 30px rgba(93, 64, 55, 0.15);
+    position: relative; 
+    overflow: hidden;
+}
+.card::before {
+    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(30, 30, 30, 0.6); z-index: 2;
+}
+/* --- 4. UI 元件 (Bars) --- */
+
+.top-bar, .bottom-bar {
+    position: fixed; 
+    
+    /* 1. 水平置中 */
+    left: 50%; 
+    transform: translateX(-50%); 
+    
+    /* 2. 寬度設定 */
+    width: 86%;  
+    
+    /* 3. 排列方式：分散對齊 */
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+
+    /* 👇 新增這一行：讓左右兩邊的 Icon 往內縮 5px */
+    padding: 20px 20px; 
+    
+    z-index: 100; 
+    pointer-events: none; 
+    transition: opacity 0.3s;
+}
+/* --- 上方 Bar (Top Bar) --- */
+
+.top-bar {
+
+/* 依照圖片，它離頂部有一段距離 (避開動態島) */
+
+top: max(80px, env(safe-area-inset-top));
+
+}
+
+
+
+/* --- 下方 Bar (Bottom Bar) --- */
+
+.bottom-bar {
+
+/* 依照圖片，它離底部非常高 (懸浮感) */
+
+bottom: max(80px, env(safe-area-inset-bottom));
+
+}
+
+
+
+/* --- 按鈕容器共用設定 --- */
+
+.btn-container {
+
+pointer-events: auto; /* 恢復按鈕可點擊 */
+
+cursor: pointer;
+
+transition: transform 0.1s;
+
+display: flex; justify-content: center; align-items: center;
+
+}
+
+.btn-container:active { transform: scale(0.92); }
+
+
+
+/* --- 針對圖片中的 Icon 樣式微調 --- */
+
+
+
+/* 1. 頭像與右側通知 (圓形) */
+
+.avatar {
+
+width: 55px; height: 55px;
+
+background-color: #947867; border-radius: 50%;
+
+}
+
+.notification {
+
+width: 55px; height: 55px;
+
+background-color: #947867; border-radius: 50%;
+
+box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+
+}
+
+
+
+/* 2. 中間搜尋條 (長條形) */
+
+.search-pill {
+
+/* 在分散對齊下，設定 flex: 1 或是固定寬度都可以，這裡建議固定寬度讓它不要太長 */
+
+width: 120px;
+
+height: 45px;
+
+background-color: #947867;
+
+border-radius: 22px;
+
+display: flex; justify-content: flex-start; align-items: center; padding-left: 15px;
+
+box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+
+
+/* 讓它在 Bar 中間不會被拉伸，保持置中 */
+
+margin: 0 auto;
+
+/* 若用 space-between，這裡可以用 transform 微調確保絕對居中，或不用動 */
+
+}
+
+
+
+/* 3. 下方中間快門鍵 (大圓) */
+
+.shutter-btn {
+
+width: 76px; height: 76px;
+
+border: 5px solid #F2EBE0; /* 外圈顏色 */
+
+background-color: #947867; border-radius:50%;
+
+box-shadow: 0 0 0 4px #947867 inset; /* 模擬圖片中的內圈層次 */
+
+}
+
+
+
+/* 4. SVG Icon 線條設定 */
+
+svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+.icon-white svg { stroke: white; stroke-width: 2; }
+
+/* 下方左右兩個 Icon 顏色較深 */
+
+.icon-brown svg { stroke: #8D6E63; stroke-width: 2.5; width: 32px; height: 32px; }
+/* --- 5. 個人頁面 (Profile) --- */
+.profile-page {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: var(--bg-color);
+    z-index: 300; transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    display: flex; flex-direction: column;
+    padding: max(20px, env(safe-area-inset-top)) 30px 40px 30px;
+}
+.profile-page.active { transform: translateX(0); }
+.back-btn { width: 40px; height: 40px; background-color: #D7CCC8; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; margin: 10px 0 20px 0; }
+.profile-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 40px; }
+.profile-avatar { width: 100px; height: 100px; background-color: #fff; border-radius: 50%; margin-bottom: 15px; }
+.profile-name { font-size: 22px; font-weight: bold; color: var(--text-dark); }
+.profile-email { font-size: 14px; opacity: 0.6; margin-top: 5px; color: var(--text-dark); }
+.profile-menu { display: flex; flex-direction: column; gap: 20px; width: 100%; }
+.menu-item { font-size: 16px; color: var(--text-dark); font-weight: 500; cursor: pointer; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.logout-btn { margin-top: auto; width: 100%; height: 50px; background-color: #C1B0A4; color: white; border: none; border-radius: 15px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: max(10px, env(safe-area-inset-bottom)); }
+
+/* --- 6. Action Sheet --- */
+.modal-backdrop {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    z-index: 400;
+}
+.modal-backdrop.active { opacity: 1; pointer-events: auto; }
+
+.action-sheet {
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    background-color: var(--bg-color);
+    border-top-left-radius: 35px; border-top-right-radius: 35px;
+    padding: 10px 25px 30px 25px;
+    padding-bottom: max(30px, env(safe-area-inset-bottom));
+    transform: translateY(100%); z-index: 450;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
+}
+.sheet-handle-area { width: 100%; height: 40px; display: flex; justify-content: center; align-items: center; }
+.sheet-handle { 
+    width: 20px; /* <--- 這裡改成 20px */
+    height: 5px; 
+    background-color: #D7CCC8; 
+    border-radius: 10px; 
+}
+.sheet-option { display: flex; align-items: center; padding: 18px 0; border-bottom: 1px solid #E0D4C8; color: var(--text-dark); font-weight: 600; }
+.sheet-option svg { width: 24px; height: 24px; margin-right: 15px; stroke: var(--primary-brown); }
+
+/* style.css */
+
+/* 1. 定義變數 */
 :root {
     --bg-color: #F2EBE0;       
     --primary-brown: #8D6E63;  
@@ -18,81 +278,15 @@
     --card-size: min(85vw, 400px); 
 }
 
-body {
-    background-color: var(--bg-color);
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden; /* 禁止瀏覽器預設捲動 */
-    position: fixed; /* 鎖定畫面 */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* =========================================
-2. 滑動軌道 (Carousel Track) - 強制螢幕寬度修正版
-   ========================================= */
-.carousel-track {
-    display: flex;
-    /* 🔥 強制總寬度為 3 個螢幕寬，避免 % 計算誤差 */
-    width: 300vw; 
-    height: 100%;
-    will-change: transform;
-    /* 🔥 預設停在第 2 頁 (主頁)：往左移動 1 個螢幕寬 */
-    transform: translateX(-100vw); 
-}
-
-.page-container {
-    /* 🔥 強制每一頁剛好 1 個螢幕寬 */
-    width: 100vw; 
-    height: 100vh;
-    overflow: hidden;
-    position: relative;
-    flex-shrink: 0; /* 禁止被擠壓 */
-    
-    /* 讓內部內容置中 */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-/* 頁面特定調整 */
-#page-memory {
-    background-color: var(--card-bg);
-    justify-content: flex-start;
-    padding-top: 80px; 
-    padding-bottom: 100px;
-    overflow-y: auto; /* 回憶頁允許捲動 */
-}
-
-#page-community {
-    background-color: #fff;
-    display: block; /* 社群頁不需要 Flex 置中 */
-    overflow-y: hidden; /* 內部自己捲動 */
-}
-
-/* 用於外部載入內容的包覆層 */
-.page-content-wrapper {
-    width: 100%; height: 100%;
-    display: flex; flex-direction: column;
-    background-color: var(--bg-color);
-}
-
-.loading-text { color: #aaa; font-size: 14px; margin-top: 20px; }
-
-/* =========================================
-   3. 主頁面 (Home Card)
-   ========================================= */
+/* 2. 設定卡片為正方形 */
 .card {
     /* 讓寬高都吃變數 */
     width: var(--card-size);
     height: var(--card-size); /* 確保是正方形 */
-    aspect-ratio: 1 / 1;
     
+    /* 其他樣式 */
     background-color: #ddd; 
     border-radius: 35px;
-    /* 預設背景圖 */
     background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80');
     background-size: cover; 
     background-position: center;
@@ -101,31 +295,22 @@ body {
     overflow: hidden;
     margin: 0 auto;
     flex-shrink: 0;
-    z-index: 5;
 }
 
-.card::before {
-    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(30, 30, 30, 0.3); z-index: 2; pointer-events: none;
-}
-
-.date-display {
-    position: absolute; top: 30px; left: 30px;
-    font-size: 16px; font-weight: 600; color: #5D4037;
-    background-color: rgba(255, 255, 255, 0.7);
-    padding: 6px 14px; border-radius: 20px;
-    backdrop-filter: blur(5px); z-index: 3;
-}
-
-/* =========================================
-   4. UI 元件 (Bars) - 鎖定卡片位置
-   ========================================= */
+/* 3. 設定 Bar 鎖定照片位置 (核心修正) */
 .top-bar, .bottom-bar {
     position: fixed; 
     width: var(--card-size); /* 寬度跟卡片一樣 */
-    left: 50%; top: 50%; bottom: auto; /* 定位在中心 */
-    display: flex; align-items: center;
-    padding: 0 5px; /* 左右內縮 */
+    
+    /* 關鍵：定位在螢幕正中心 */
+    left: 50%; 
+    top: 50%;
+    bottom: auto; /* 清除舊設定 */
+    
+    display: flex; 
+    align-items: center;
+    padding: 0 5px; /* 左右內縮 5px */
+    
     z-index: 100; pointer-events: none;
     transition: opacity 0.3s;
 }
@@ -133,141 +318,189 @@ body {
 .top-bar { 
     justify-content: space-between;
     /* 往上移動：(卡片一半高度) + (30px 間距) */
-    margin-top: calc( (var(--card-size) / -2) - 50px );
-    transform: translate(-50%, -100%);
+    margin-top: calc( (var(--card-size) / -2) - 30px );
+    transform: translate(-50%, -100%); /* 修正 Y 軸定位點 */
 }
 
 .bottom-bar { 
-    justify-content: center; gap: 60px;
+    justify-content: center;
+    gap: 80px;
     /* 往下移動：(卡片一半高度) + (30px 間距) */
     margin-top: calc( (var(--card-size) / 2) + 30px );
     transform: translate(-50%, 0);
 }
 
-.btn-container {
-    width: 44px; height: 44px; 
-    background-color: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px);
-    border-radius: 50%; display: flex; justify-content: center; align-items: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); pointer-events: auto; cursor: pointer;
-    transition: transform 0.1s;
+.calendar-container {
+    width: 90%;
+    max-width: 350px;
+    background: transparent;
+    margin: 0 auto; /* 確保置中 */
 }
-.btn-container:active { transform: scale(0.92); }
 
-.avatar, .notification { width: 55px; height: 55px; background-color: #947867; border-radius: 50%; }
-.search-pill { width: 120px; height: 45px; background-color: #947867; border-radius: 22px; padding-left: 15px; margin: 0 auto; justify-content: flex-start; }
-.shutter-btn { width: 76px; height: 76px; border: 5px solid #F2EBE0; background-color: #947867; border-radius: 50%; box-shadow: 0 0 0 4px #947867 inset; }
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: #000;
+    margin-bottom: 15px;
+}
 
-/* SVG Icon */
-svg { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.icon-white svg { stroke: white; stroke-width: 2; }
-.icon-brown svg { stroke: #8D6E63; stroke-width: 2.5; width: 32px; height: 32px; }
+.days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px; /* 日期之間的間距 */
+    row-gap: 20px;
+}
 
-/* =========================================
-   5. 回憶頁面 (Calendar)
-   ========================================= */
-.calendar-container { width: 90%; max-width: 350px; margin: 0 auto; }
-.weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 15px; }
-.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; row-gap: 20px; }
-.day-cell { width: 100%; aspect-ratio: 1/1; display: flex; justify-content: center; align-items: center; font-size: 16px; color: #9E9E9E; border-radius: 50%; cursor: pointer; position: relative; }
-.day-cell.has-photo { background-size: cover; background-position: center; color: transparent; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-.calendar-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: var(--text-dark); font-weight: bold; }
-.month-nav-btn { background: none; border: none; font-size: 20px; color: var(--primary-brown); cursor: pointer; padding: 10px; }
+.day-cell {
+    width: 100%;
+    aspect-ratio: 1/1; /* 強制正方形 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    color: #9E9E9E;
+    border-radius: 50%; /* 圓形 */
+    position: relative;
+    cursor: pointer;
+    font-weight: 500;
+}
 
-/* =========================================
-   6. 社群頁面 (Community - IG Style)
-   ========================================= */
-#feedContainer { flex: 1; overflow-y: auto; padding-bottom: 100px; background-color: #fff; }
-.feed-card { background-color: transparent; margin-bottom: 20px; border-bottom: 1px solid rgba(141, 110, 99, 0.1); padding-bottom: 15px; }
-.feed-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; }
-.feed-user-info { display: flex; align-items: center; gap: 10px; }
-.feed-avatar { width: 36px; height: 36px; border-radius: 50%; background-color: #ddd; background-size: cover; border: 1px solid #eee; }
-.feed-username { font-size: 14px; font-weight: 700; color: #333; }
-.feed-location { font-size: 11px; color: #999; }
-.feed-carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; height: 400px; scrollbar-width: none; }
-.feed-carousel::-webkit-scrollbar { display: none; }
-.feed-image { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #eee; scroll-snap-align: start; }
-.feed-counter { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6); color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; }
-.feed-actions { padding: 10px 15px; display: flex; gap: 15px; }
-.action-icon { width: 26px; height: 26px; cursor: pointer; fill: none; stroke: #333; stroke-width: 2; transition: transform 0.1s; }
-.action-icon:active { transform: scale(0.9); }
-.action-icon.liked { fill: #ED4956; stroke: #ED4956; animation: likeBounce 0.3s; }
-@keyframes likeBounce { 0%{transform:scale(1);} 50%{transform:scale(1.2);} 100%{transform:scale(1);} }
-.feed-likes { padding: 0 15px; font-size: 14px; font-weight: 700; color: #333; margin-bottom: 5px; }
-.feed-caption { padding: 0 15px; font-size: 14px; color: #333; line-height: 1.4; }
-.view-comments { padding: 5px 15px; font-size: 13px; color: #999; margin-top: 5px; cursor: pointer; }
+/* 當這一天有照片時的樣式 */
+.day-cell.has-photo {
+    background-size: cover;
+    background-position: center;
+    color: white; /* 有照片時文字變白 */
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
 
-/* =========================================
-   7. 全螢幕覆蓋層 (Popup Pages)
-   ========================================= */
-.profile-page, .editor-page, .payment-modal, .action-sheet, .comment-sheet {
+/* 今天的日期標記 (選填) */
+.day-cell.today {
+    color: #8D6E63;
+    font-weight: bold;
+}
+
+/* --- 編輯頁面 (Editor Page) --- */
+.editor-page {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: var(--bg-color); z-index: 200;
-    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    background-color: var(--bg-color);
+    z-index: 600; /* 比所有東西都高 */
+    transform: translateY(100%); /* 預設藏在下面 */
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     display: flex; flex-direction: column;
 }
-.profile-page { transform: translateX(-100%); z-index: 300; } /* Profile 是橫向滑入 */
-.active { transform: translateY(0) !important; transform: translateX(0) !important; }
+.editor-page.active { transform: translateY(0); }
 
-/* 背景遮罩 */
-.modal-backdrop {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5); z-index: 150; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+/* 頂部導航 */
+.editor-header {
+    height: 50px;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 20px;
+    margin-top: max(10px, env(safe-area-inset-top)); /* 避開瀏海 */
 }
-.modal-backdrop.active { opacity: 1; pointer-events: auto; }
-
-/* --- 個人頁面細節 --- */
-.profile-page { padding: 20px 30px; }
-.back-btn { width: 40px; height: 40px; background-color: #D7CCC8; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; margin-bottom: 20px; }
-.profile-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 40px; }
-.profile-avatar { width: 100px; height: 100px; background-color: #fff; border-radius: 50%; margin-bottom: 15px; }
-.profile-name { font-size: 22px; font-weight: bold; color: var(--text-dark); }
-.profile-email { font-size: 14px; opacity: 0.6; margin-top: 5px; color: var(--text-dark); }
-.profile-menu { display: flex; flex-direction: column; gap: 20px; width: 100%; flex: 1; }
-.menu-item { font-size: 16px; color: var(--text-dark); font-weight: 500; cursor: pointer; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center; }
-.menu-item .vip-bell { margin-right: 10px; width: 24px; height: 24px; stroke: var(--primary-brown); }
-.menu-item .vip-bell.active { fill: #ED4956; stroke: #ED4956; }
-.logout-btn { width: 100%; height: 50px; background-color: #C1B0A4; color: white; border: none; border-radius: 15px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
-
-/* --- 編輯器細節 --- */
-.editor-page { z-index: 600; }
-.editor-header { height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-top: 10px; }
 .header-btn { font-size: 16px; font-weight: 500; color: var(--text-dark); cursor: pointer; }
 .header-title { font-weight: bold; font-size: 17px; }
-.preview-area { width: 100%; height: 45vh; background-color: #ddd; background-size: cover; background-position: center; }
-.editor-tools-bar { display: flex; align-items: center; padding: 10px 15px; background-color: var(--bg-color); gap: 10px; }
-.tool-capsule { height: 36px; background-color: rgba(93, 64, 55, 0.1); border-radius: 18px; display: flex; justify-content: center; align-items: center; padding: 0 12px; cursor: pointer; color: var(--text-dark); font-size: 13px; }
-.tool-capsule.right { margin-left: auto; background-color: rgba(93, 64, 55, 0.8); color: white; }
-.gallery-grid { flex: 1; background-color: #fff; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; overflow-y: auto; padding-top: 2px; }
-.gallery-item { width: 100%; aspect-ratio: 1/1; background-color: #eee; background-size: cover; cursor: pointer; }
-.gallery-add-btn { background-color: #e0e0e0; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: #555; font-size: 12px; }
+.next-btn { color: #8D6E63; font-weight: 700; }
 
-/* --- Action Sheet --- */
-.action-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--bg-color); border-radius: 35px 35px 0 0; padding: 10px 25px 40px 25px; transform: translateY(100%); z-index: 450; transition: transform 0.3s; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); }
-.sheet-handle-area { width: 100%; height: 40px; display: flex; justify-content: center; align-items: center; }
-.sheet-handle { width: 40px; height: 5px; background-color: #D7CCC8; border-radius: 10px; }
-.sheet-option { display: flex; align-items: center; padding: 18px 0; border-bottom: 1px solid #E0D4C8; color: var(--text-dark); font-weight: 600; cursor: pointer; }
-.sheet-option svg { width: 24px; height: 24px; margin-right: 15px; stroke: var(--primary-brown); }
+/* 預覽區 (上半部) */
+.preview-area {
+    width: 100%;
+    height: 45vh; /* 佔螢幕高度 45% */
+    background-color: #ddd;
+    background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c'); /* 預設圖 */
+    background-size: cover; background-position: center;
+    transition: background-image 0.2s;
+}
 
-/* --- 留言板 --- */
-.comment-sheet { height: 75%; background-color: #fff; border-radius: 20px 20px 0 0; z-index: 999; box-shadow: 0 -5px 30px rgba(0,0,0,0.15); }
-.comment-header { height: 50px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333; position: relative; }
-.close-comment-btn { position: absolute; right: 15px; font-size: 24px; color: #999; cursor: pointer; }
-.comment-list { flex: 1; overflow-y: auto; padding: 15px; }
-.comment-item { display: flex; gap: 12px; margin-bottom: 20px; }
-.comment-avatar { width: 36px; height: 36px; background: #ddd; border-radius: 50%; flex-shrink: 0; }
-.comment-content { font-size: 14px; line-height: 1.4; color: #333; }
-.comment-user { font-weight: bold; margin-right: 5px; }
-.comment-time { font-size: 11px; color: #999; margin-top: 4px; }
-.comment-input-area { height: 60px; border-top: 1px solid #eee; display: flex; align-items: center; padding: 0 15px; background: #fff; }
-.comment-input { flex: 1; height: 40px; border: 1px solid #ddd; border-radius: 20px; padding: 0 15px; outline: none; }
-.comment-send-btn { margin-left: 10px; color: var(--primary-brown); font-weight: bold; cursor: pointer; }
+/* 工具列 (中間黑色膠囊區) */
+.editor-tools-bar {
+    display: flex; align-items: center;
+    padding: 10px 15px;
+    background-color: var(--bg-color);
+    gap: 10px;
+}
+.tool-capsule {
+    height: 36px;
+    background-color: rgba(93, 64, 55, 0.1); /* 淺褐色背景 */
+    border-radius: 18px;
+    display: flex; justify-content: center; align-items: center;
+    padding: 0 12px; cursor: pointer;
+    color: var(--text-dark);
+}
+.tool-capsule.right {
+    margin-left: auto; /* 推到最右邊 */
+    background-color: rgba(93, 64, 55, 0.8); /* 深色背景 */
+    color: white;
+    font-size: 12px; font-weight: bold;
+    gap: 6px;
+}
 
-/* --- Story Mode --- */
-#storyPage { background-color: #000; z-index: 9999; }
-.story-img-box { width: 100%; height: 100%; background-size: contain; background-repeat: no-repeat; background-position: center; }
-.story-progress-bar { position: absolute; top: 50px; left: 10px; right: 10px; display: flex; gap: 5px; z-index: 10000; }
-.progress-segment { flex: 1; height: 2px; background: rgba(255,255,255,0.3); }
+/* 圖庫區 (下方可滾動網格) */
+.gallery-grid {
+    flex: 1; /* 填滿剩下的空間 */
+    background-color: #fff;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 一排 4 張 */
+    gap: 2px;
+    overflow-y: auto;
+    padding-top: 2px;
+}
+.gallery-item {
+    width: 100%;
+    aspect-ratio: 1/1; /* 正方形 */
+    background-color: #eee;
+    background-size: cover; background-position: center;
+    cursor: pointer;
+    position: relative;
+}
+/* 選中時的遮罩 */
+.gallery-item.selected::after {
+    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(255,255,255,0.5);
+    border: 3px solid #8D6E63; box-sizing: border-box;
+}
 
+/* 第一格：開相機 */
+.camera-roll-trigger {
+    background-color: #ccc;
+    display: flex; justify-content: center; align-items: center;
+}
+
+/* --- 8. 照片列表樣式 (Photo Stream) --- */
+.timeline-item {
+    margin-bottom: 25px; /* 照片之間的距離 */
+    width: 100%;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.timeline-card {
+    background: white;
+    border-radius: 20px; /* 圓角 */
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08); /* 讓照片浮起來的陰影 */
+}
+
+.timeline-img {
+    width: 100%;
+    /* 這裡設定照片比例，例如 4:3 或 1:1，cover 代表填滿裁切 */
+    aspect-ratio: 4/3; 
+    background-size: cover;
+    background-position: center;
+    display: block;
+}
+
+/* (選填) 如果你想在照片下面顯示小小的拍攝時間 */
+.timeline-caption {
+    padding: 12px 15px;
+    font-size: 13px;
+    color: #999;
+    text-align: right; /* 時間靠右顯示 */
+    background-color: #fff;
+    border-top: 1px solid #f0f0f0;
+}
 /* --- 付款視窗 --- */
 .payment-modal { background-color: #EFEBE9; z-index: 2000; }
 .payment-header { background-color: #D7CCC8; padding: 60px 20px 20px 20px; color: white; }
