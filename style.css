@@ -104,17 +104,72 @@ body {
 .icon-white i { color: white; } .icon-brown i { color: #8D6E63; }
 
 /* =========================================
-   5. 回憶頁面 (Calendar)
+   5. 回憶頁面 (Calendar) - 修正網格樣式
    ========================================= */
-.calendar-wrapper { width: 100%; height: 100%; padding-bottom: 100px; }
-.calendar-container { width: 90%; max-width: 350px; margin: 0 auto; }
-.weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 15px; color: var(--text-dark); }
-.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; row-gap: 20px; }
-.day-cell { width: 100%; aspect-ratio: 1/1; display: flex; justify-content: center; align-items: center; font-size: 16px; color: #9E9E9E; border-radius: 50%; cursor: pointer; position: relative; font-weight: 500; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-.day-cell.has-photo { background-size: cover; background-position: center; color: transparent; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-.calendar-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: var(--text-dark); font-weight: bold; font-size: 18px; }
-.month-nav-btn { background: none; border: none; font-size: 20px; color: var(--primary-brown); cursor: pointer; padding: 10px; }
+.calendar-container {
+    width: 90%;
+    max-width: 350px;
+    margin: 0 auto;
+}
 
+/* 星期幾 (橫向排列) */
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 強制 7 等份 */
+    text-align: center;
+    font-size: 13px;
+    font-weight: bold;
+    color: #8D6E63;
+    margin-bottom: 15px;
+}
+
+/* 日期區域 (網格排列) */
+.days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 強制 7 等份 */
+    gap: 10px;      /* 格子之間的間距 */
+    row-gap: 15px;  /* 上下排的間距 */
+}
+
+/* 每一個日期格子 */
+.day-cell {
+    width: 100%;
+    aspect-ratio: 1 / 1; /* 強制正方形 */
+    background-color: #fff;
+    border-radius: 50%;  /* 圓形 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    color: #9E9E9E;
+    position: relative;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* 有照片的日期 */
+.day-cell.has-photo {
+    background-size: cover;
+    background-position: center;
+    color: white;       /* 有照片時文字變白 */
+    font-weight: bold;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8); /* 文字陰影 */
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* 月份切換按鈕 */
+.calendar-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+.month-nav-btn {
+    background: none; border: none;
+    font-size: 20px; color: #8D6E63;
+    cursor: pointer; padding: 5px 10px;
+}
 /* =========================================
    6. 社群頁面 (Community)
    ========================================= */
