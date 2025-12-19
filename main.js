@@ -1,404 +1,294 @@
 // ==========================================
-// 1. 全域變數與 DOM 元素
+// 0. 安全性與全域變數
 // ==========================================
+if (localStorage.getItem('isLoggedIn') !== 'true') {
+    // 若沒登入可以導回 login.html，這邊先註解方便測試
+    // window.location.href = 'login.html';
+}
+
 const track = document.getElementById('track');
 const topBar = document.getElementById('topBar');
 const bottomBar = document.getElementById('bottomBar');
-
-const profilePage = document.getElementById('profilePage');
-const openProfileBtn = document.getElementById('openProfileBtn');
-const closeProfileBtn = document.getElementById('closeProfileBtn');
-const logoutBtn = document.querySelector('.logout-btn');
-
-const actionSheet = document.getElementById('actionSheet');
-const backdrop = document.getElementById('backdrop');
-const shutterBtn = document.getElementById('shutterBtn');
-
-const takePhotoBtn = document.getElementById('takePhotoBtn');
-const chooseAlbumBtn = document.getElementById('chooseAlbumBtn');
-const cameraInput = document.getElementById('cameraInput');
-const albumInput = document.getElementById('albumInput');
 const card = document.querySelector('.card');
 
-// 狀態變數
-let currentPage = 1;
-let startX = 0; let startY = 0;
-let currentTranslate = -33.333;
-let isDraggingPage = false;
-let startTranslate = 0;
-let isHorizontalMove = false;
-let isDraggingSheet = false;
-let sheetStartY = 0;
-
-// 資料庫變數
+let isVIP = localStorage.getItem('isVIP') === 'true';
 let db;
-const DB_NAME = 'GourmetDB';
-const STORE_NAME = 'photos';
+const DB_NAME = 'GourmetApp_Final';
+const STORE_PHOTOS = 'photos';
+const STORE_POSTS = 'posts';
+
+let currentPage = 1; // 0: Memory, 1: Home, 2: Community
+let startX = 0, startTranslate = -33.3333, isDragging = false, isHorizontalMove = false;
+let displayDate = new Date();
+let finalFiles = [];
 
 // ==========================================
-// 2. 初始化資料庫 (IndexedDB)
+// 1. 資料庫與初始化
 // ==========================================
 function initDB() {
     const request = indexedDB.open(DB_NAME, 1);
-    
-    request.onerror = (e) => console.error("DB Error", e);
-    
     request.onupgradeneeded = (e) => {
         db = e.target.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME, { keyPath: 'date' });
-        }
+        if(!db.objectStoreNames.contains(STORE_PHOTOS)) db.createObjectStore(STORE_PHOTOS, {keyPath:'id', autoIncrement:true});
+        if(!db.objectStoreNames.contains(STORE_POSTS)) db.createObjectStore(STORE_POSTS, {keyPath:'id', autoIncrement:true});
     };
-
     request.onsuccess = (e) => {
         db = e.target.result;
-        console.log("資料庫連線成功");
-        // 如果資料庫準備好了，嘗試畫一次日曆 (確保切換頁面時有資料)
+        updateVipUI();
+        loadLatestPhoto();
         renderCalendar();
+        renderCommunity();
     };
 }
 initDB();
 
-// ==========================================
-// 3. 動態載入頁面 & 確保日曆繪製
-// ==========================================
+function updateVipUI() {
+    const statusText = document.getElementById('vipStatusText');
+    const bell = document.getElementById('vipBellIcon');
+    if(statusText) statusText.textContent = isVIP ? "Premium" : "Free";
+    if(bell && isVIP) bell.classList.add('active');
+}
+
+function loadLatestPhoto() {
+    const tx = db.transaction([STORE_PHOTOS], 'readonly');
+    const req = tx.objectStore(STORE_PHOTOS).getAll();
+    req.onsuccess = (e) => {
+        const photos = e.target.result;
+        if(photos.length > 0) {
+            photos.sort((a,b)=>b.timestamp-a.timestamp);
+            if(card) card.style.backgroundImage = `url('${URL.createObjectURL(photos[0].imageBlob)}')`;
+        }
+    };
+}
+
+// 載入外部頁面 (Memory)
 async function loadExternalPages() {
     try {
-        // 載入 Memory
-        const memoryRes = await fetch('memory.html');
-        if (memoryRes.ok) {
-            const text = await memoryRes.text();
-            const doc = new DOMParser().parseFromString(text, 'text/html');
-            const content = doc.querySelector('.page-content-wrapper');
-            if(content) {
-                const container = document.getElementById('page-memory');
-                container.innerHTML = ''; 
-                container.appendChild(content);
-                
-                // ⚠️ 關鍵修正：HTML 塞進去後，立刻畫日曆
-                console.log("Memory 頁面載入完成，開始繪製日曆...");
-                renderCalendar();
-            }
+        const res = await fetch('memory.html');
+        if(res.ok) {
+            document.getElementById('page-memory').innerHTML = `<div class="calendar-wrapper">${await res.text()}</div>`;
+            if(db) renderCalendar();
         }
-
-        // 載入 Community
-        const communityRes = await fetch('community.html');
-        if (communityRes.ok) {
-            const text = await communityRes.text();
-            const doc = new DOMParser().parseFromString(text, 'text/html');
-            const content = doc.querySelector('.page-content-wrapper');
-            if(content) {
-                const container = document.getElementById('page-community');
-                container.innerHTML = '';
-                container.appendChild(content);
-            }
-        }
-    } catch (error) {
-        console.error('頁面載入失敗:', error);
-    }
+    } catch(e) {}
 }
 loadExternalPages();
 
 // ==========================================
-// 4. 繪製日曆核心邏輯 (Render Calendar)
+// 2. 滑動邏輯 (Carousel)
 // ==========================================
-async function renderCalendar() {
-    const calendarContainer = document.getElementById('calendarDays');
-    // 如果找不到容器 (HTML還沒載入)，就先離開，等 loadExternalPages 呼叫
-    if (!calendarContainer) return; 
+track.addEventListener('mousedown', startDrag);
+track.addEventListener('touchstart', startDrag);
 
-    calendarContainer.innerHTML = ''; // 清空
-
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth(); 
-
-    // 設定月份標題
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const title = document.getElementById('calendarMonth');
-    if(title) title.textContent = `${monthNames[month]} ${year}`;
-
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    // 取得資料庫所有照片
-    const photosMap = await getAllPhotosMap();
-
-    // 空白格
-    for (let i = 0; i < firstDay; i++) {
-        calendarContainer.appendChild(document.createElement('div'));
-    }
-
-    // 日期格
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dayCell = document.createElement('div');
-        dayCell.classList.add('day-cell');
-        dayCell.textContent = day;
-
-        // 組成 YYYY-MM-DD
-        const currentMonthStr = (month + 1).toString().padStart(2, '0');
-        const currentDayStr = day.toString().padStart(2, '0');
-        const dateString = `${year}-${currentMonthStr}-${currentDayStr}`;
-
-        // 如果這天有照片
-        if (photosMap[dateString]) {
-            dayCell.classList.add('has-photo');
-            const imgUrl = URL.createObjectURL(photosMap[dateString]);
-            dayCell.style.backgroundImage = `url('${imgUrl}')`;
-            dayCell.textContent = ''; // 有照片就不顯示數字 (或保留看你喜好)
-            
-            // 點擊事件：換首頁圖
-            dayCell.onclick = () => {
-                card.style.backgroundImage = `url('${imgUrl}')`;
-                // 自動滑回首頁
-                currentTranslate = -33.333;
-                currentPage = 1;
-                updateCarousel();
-            };
-        }
-        calendarContainer.appendChild(dayCell);
-    }
-}
-
-function getAllPhotosMap() {
-    return new Promise((resolve) => {
-        if (!db) { resolve({}); return; }
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.getAll();
-        request.onsuccess = (e) => {
-            const results = e.target.result;
-            const map = {};
-            if(results){
-                results.forEach(item => { map[item.date] = item.imageBlob; });
-            }
-            resolve(map);
-        };
-    });
-}
-
-// ==========================================
-// 5. 圖片處理 (存入 DB + 預覽)
-// ==========================================
-function handleImageUpload(file) {
-    if (!file) return;
-
-    // 1. 預覽
-    const imageURL = URL.createObjectURL(file);
-    card.style.backgroundImage = `url('${imageURL}')`;
-
-    // 2. 存入 DB
-    if (!db) return;
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.put({
-        date: today,
-        imageBlob: file
-    });
-
-    request.onsuccess = () => {
-        console.log("照片已存檔:", today);
-        renderCalendar(); // 存完後立刻重畫日曆
-        alert("照片已記錄到今天的回憶中！");
-    };
-}
-
-
-// ==========================================
-// 6. 滑動與 UI 互動邏輯 (保持原本)
-// ==========================================
-track.addEventListener('mousedown', pageDragStart);
-track.addEventListener('touchstart', pageDragStart);
-
-function pageDragStart(e) {
-    if (isDraggingSheet) return;
-    isDraggingPage = true; 
+function startDrag(e) {
+    if (e.target.closest('.comment-sheet')) return; // 留言板內不滑動
+    isDragging = true;
     isHorizontalMove = false;
-    startX = getX(e); startY = getY(e);
-    startTranslate = -currentPage * 33.333;
+    startX = e.pageX || e.touches[0].clientX;
+    const startY = e.pageY || e.touches[0].clientY;
+    
+    startTranslate = -currentPage * 33.3333;
     track.style.transition = 'none';
-    window.addEventListener('mousemove', pageDragMove);
-    window.addEventListener('touchmove', pageDragMove, {passive: false});
-    window.addEventListener('mouseup', pageDragEnd);
-    window.addEventListener('touchend', pageDragEnd);
 }
 
-function pageDragMove(e) {
-    if (!isDraggingPage) return;
-    const currentX = getX(e); const currentY = getY(e);
-    const deltaX = currentX - startX; const deltaY = currentY - startY;
-    if (!isHorizontalMove && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
-        if (Math.abs(deltaX) > Math.abs(deltaY)) isHorizontalMove = true;
-        else { isDraggingPage = false; pageDragEnd(e); return; }
+window.addEventListener('mousemove', moveDrag);
+window.addEventListener('touchmove', moveDrag, {passive: false});
+
+function moveDrag(e) {
+    if(!isDragging) return;
+    const x = e.pageX || e.touches[0].clientX;
+    const y = e.pageY || e.touches[0].clientY;
+    const deltaX = x - startX;
+    const deltaY = y - (e.pageY || e.touches[0].clientY);
+
+    if (!isHorizontalMove) {
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+            isHorizontalMove = true;
+        } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
+            isDragging = false;
+            return;
+        }
     }
+
     if (isHorizontalMove) {
-        if(e.cancelable) e.preventDefault(); 
-        const screenWidth = window.innerWidth;
-        const movePercent = (deltaX / screenWidth) * 33.333;
-        let nextTranslate = startTranslate + movePercent;
-        if (nextTranslate > 0 || nextTranslate < -66.666) nextTranslate = startTranslate + (movePercent * 0.3);
-        currentTranslate = nextTranslate;
-        track.style.transform = `translateX(${currentTranslate}%)`;
+        if(e.cancelable) e.preventDefault();
+        const percentMove = (deltaX / window.innerWidth) * 33.3333;
+        track.style.transform = `translateX(${startTranslate + percentMove}%)`;
     }
 }
 
-function pageDragEnd(e) {
-    if (!isDraggingPage && !isHorizontalMove) { cleanupPageDrag(); return; }
-    isDraggingPage = false;
-    const movedBy = currentTranslate - startTranslate;
-    const threshold = 5; 
-    if (movedBy < -threshold && currentPage < 2) currentPage++; 
-    else if (movedBy > threshold && currentPage > 0) currentPage--; 
-    updateCarousel();
-    cleanupPageDrag();
-}
+window.addEventListener('mouseup', endDrag);
+window.addEventListener('touchend', endDrag);
 
-function cleanupPageDrag() {
-    window.removeEventListener('mousemove', pageDragMove);
-    window.removeEventListener('touchmove', pageDragMove);
-    window.removeEventListener('mouseup', pageDragEnd);
-    window.removeEventListener('touchend', pageDragEnd);
+function endDrag(e) {
+    if(!isDragging) return;
+    isDragging = false;
+
+    if (isHorizontalMove) {
+        const endX = e.pageX || e.changedTouches[0].clientX;
+        const diff = startX - endX;
+
+        if (diff > 50 && currentPage < 2) {
+            if (currentPage === 1 && !isVIP) {
+                alert("社群為 VIP 功能！");
+            } else {
+                currentPage++;
+            }
+        } 
+        else if (diff < -50 && currentPage > 0) {
+            currentPage--;
+        }
+    }
+    updateCarousel();
 }
 
 function updateCarousel() {
     track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-    track.style.transform = `translateX(-${currentPage * 33.333}%)`;
-    const isHome = (currentPage === 1);
-    topBar.style.opacity = isHome ? '1' : '0';
-    bottomBar.style.opacity = isHome ? '1' : '0';
-    topBar.style.pointerEvents = isHome ? 'auto' : 'none';
-    bottomBar.style.pointerEvents = isHome ? 'auto' : 'none';
-}
-
-// Action Sheet & Profile
-openProfileBtn.addEventListener('click', () => profilePage.classList.add('active'));
-closeProfileBtn.addEventListener('click', () => profilePage.classList.remove('active'));
-logoutBtn.addEventListener('click', () => alert('Log out clicked'));
-
-shutterBtn.addEventListener('click', () => {
-    actionSheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-    actionSheet.style.transform = 'translateY(0)';
-    backdrop.classList.add('active');
-});
-backdrop.addEventListener('click', () => {
-    actionSheet.style.transition = 'transform 0.3s ease-out';
-    actionSheet.style.transform = 'translateY(100%)';
-    backdrop.classList.remove('active');
-});
-
-// Camera Inputs
-takePhotoBtn.addEventListener('click', () => { backdrop.click(); cameraInput.click(); });
-cameraInput.addEventListener('change', (e) => handleImageUpload(e.target.files[0]));
-chooseAlbumBtn.addEventListener('click', () => { backdrop.click(); albumInput.click(); });
-albumInput.addEventListener('change', (e) => handleImageUpload(e.target.files[0]));
-
-function getX(e) { return e.type.includes('mouse') ? e.pageX : e.touches[0].clientX; }
-function getY(e) { return e.type.includes('mouse') ? e.pageY : e.touches[0].clientY; }
-
-// ==========================================
-// 9. 編輯貼文邏輯 (支援真實多圖匯入)
-// ==========================================
-
-const editBtn = document.getElementById('editBtn');
-const editorPage = document.getElementById('editorPage');
-const closeEditorBtn = document.getElementById('closeEditorBtn');
-const galleryGrid = document.getElementById('galleryGrid');
-const editorPreview = document.getElementById('editorPreview');
-const multiPhotoInput = document.getElementById('multiPhotoInput'); // 新增的多選 input
-
-// 1. 開啟編輯頁面
-editBtn.addEventListener('click', () => {
-    editorPage.classList.add('active');
+    track.style.transform = `translateX(-${currentPage * 33.3333}%)`;
     
-    // 如果圖庫是空的 (只有那個相機按鈕)，就自動觸發選照片
-    // 這樣使用者體驗會很像「一點進來就讓你選照片」
-    if(galleryGrid.children.length <= 1) {
-        setTimeout(() => {
-            if(confirm("要從相簿匯入照片到編輯區嗎？")) {
-                multiPhotoInput.click();
-            }
-        }, 300);
-    }
-});
-
-closeEditorBtn.addEventListener('click', () => {
-    editorPage.classList.remove('active');
-});
-
-// 2. 監聽「真實圖庫按鈕」 (那個第一格相機 icon)
-// 原本的 id 是 realGalleryBtn，我們沿用它來觸發多選
-const realGalleryBtn = document.getElementById('realGalleryBtn');
-if(realGalleryBtn) {
-    realGalleryBtn.addEventListener('click', () => {
-        multiPhotoInput.click();
+    const isHome = currentPage === 1;
+    if(topBar) topBar.style.opacity = isHome ? 1 : 0;
+    if(bottomBar) bottomBar.style.opacity = isHome ? 1 : 0;
+    
+    document.querySelectorAll('.page-container').forEach((p,i) => {
+        p.style.pointerEvents = (i === currentPage) ? 'auto' : 'none';
     });
 }
 
-// 3. 當使用者選了多張照片後 (核心邏輯)
-multiPhotoInput.addEventListener('change', (e) => {
-    const files = e.target.files;
-    
-    if (files && files.length > 0) {
-        // 先把第一張設為大圖預覽
-        const firstImgUrl = URL.createObjectURL(files[0]);
-        editorPreview.style.backgroundImage = `url('${firstImgUrl}')`;
+// 強制初始化對齊
+setTimeout(updateCarousel, 100);
 
-        // 開始把照片一張張塞入下方格子
-        // 注意：我們保留第一個按鈕 (realGalleryBtn)，把新照片加在後面
-        Array.from(files).forEach((file) => {
-            renderPhotoToGrid(file);
+// ==========================================
+// 3. 按鍵功能 (Search, Message, Profile, Edit)
+// ==========================================
+
+// Search (左下)
+const searchBtn = document.getElementById('searchBtn');
+if(searchBtn) {
+    searchBtn.addEventListener('click', () => {
+        window.location.href = 'search.html';
+    });
+}
+
+// Message (右上)
+const msgBtn = document.getElementById('openMessageBtn');
+const msgPage = document.getElementById('messagePage');
+const closeMsgBtn = document.getElementById('closeMessageBtn');
+if(msgBtn && msgPage) {
+    msgBtn.addEventListener('click', () => {
+        msgPage.classList.add('active');
+    });
+    closeMsgBtn.addEventListener('click', () => {
+        msgPage.classList.remove('active');
+    });
+}
+
+// Profile (左上)
+const profileBtn = document.getElementById('openProfileBtn');
+const profilePage = document.getElementById('profilePage');
+const closeProfileBtn = document.getElementById('closeProfileBtn');
+if(profileBtn && profilePage) {
+    profileBtn.addEventListener('click', () => {
+        profilePage.classList.add('active');
+    });
+    closeProfileBtn.addEventListener('click', () => {
+        profilePage.classList.remove('active');
+    });
+}
+
+// Editor (右下)
+const editBtn = document.getElementById('editBtn');
+if(editBtn) editBtn.onclick = () => document.getElementById('editorPage').classList.add('active');
+document.getElementById('closeEditorBtn').onclick = () => document.getElementById('editorPage').classList.remove('active');
+
+// Shutter (中間) - 開啟 Action Sheet
+const shutterBtn = document.getElementById('shutterBtn');
+const actionSheet = document.getElementById('actionSheet');
+const backdrop = document.getElementById('backdrop');
+if(shutterBtn) {
+    shutterBtn.onclick = () => {
+        actionSheet.classList.add('active');
+        backdrop.classList.add('active');
+    };
+    backdrop.onclick = () => {
+        actionSheet.classList.remove('active');
+        backdrop.classList.remove('active');
+    };
+}
+
+// ==========================================
+// 4. 發布與社群邏輯
+// ==========================================
+const publishBtn = document.getElementById('publishBtn');
+if(publishBtn) publishBtn.addEventListener('click', () => {
+    if(finalFiles.length===0) { alert("無照片"); return; }
+    
+    const tx = db.transaction([STORE_PHOTOS, STORE_POSTS], 'readwrite');
+    finalFiles.forEach((f,i) => {
+        tx.objectStore(STORE_PHOTOS).add({
+            date: new Date().toISOString().split('T')[0],
+            imageBlob: f, timestamp: Date.now()+i
+        });
+    });
+    
+    if(isVIP) {
+        tx.objectStore(STORE_POSTS).add({
+            user: "Me", location: "Taiwan", images: finalFiles, likes: 0, caption: "New post!", isVIP: true, timestamp: Date.now()
         });
     }
+    
+    tx.oncomplete = () => {
+        alert("Published!");
+        document.getElementById('editorPage').classList.remove('active');
+        loadLatestPhoto(); renderCalendar(); if(isVIP) renderCommunity();
+    };
 });
 
-// 輔助函式：把單張照片檔案畫到格子上
-function renderPhotoToGrid(file) {
-    const div = document.createElement('div');
-    div.classList.add('gallery-item');
-    
-    // 建立預覽連結
-    const imgUrl = URL.createObjectURL(file);
-    div.style.backgroundImage = `url('${imgUrl}')`;
-    
-    // 點擊事件：換上方大圖
-    div.addEventListener('click', () => {
-        // 移除其他人的選中狀態
-        document.querySelectorAll('.gallery-item').forEach(el => el.classList.remove('selected'));
-        // 自己變選中
-        div.classList.add('selected');
-        // 換大圖
-        editorPreview.style.backgroundImage = `url('${imgUrl}')`;
-    });
-
-    galleryGrid.appendChild(div);
+function renderCommunity() {
+    const container = document.getElementById('feedContainer');
+    if(!container || !db) return;
+    const req = db.transaction([STORE_POSTS], 'readonly').objectStore(STORE_POSTS).getAll();
+    req.onsuccess = (e) => {
+        let posts = e.target.result;
+        container.innerHTML = '';
+        if(posts.length === 0) {
+            posts = [{ user:"Foodie", location:"Tokyo", likes:99, caption:"Ramen!", fakeImage:"https://images.unsplash.com/photo-1569937724357-19506772436f?w=600&q=80" }];
+        }
+        posts.sort((a,b)=>b.timestamp-a.timestamp);
+        
+        posts.forEach(post => {
+            const card = document.createElement('div'); card.className = 'feed-card';
+            let imgUrl = post.fakeImage || (post.images && post.images.length>0 ? URL.createObjectURL(post.images[0]) : '');
+            
+            card.innerHTML = `
+                <div class="feed-header">
+                    <div class="feed-user-info">
+                        <div class="feed-avatar"></div>
+                        <div class="feed-username">${post.user}</div>
+                    </div>
+                </div>
+                <div class="feed-image" style="background-image: url('${imgUrl}'); height:350px;"></div>
+                <div class="feed-actions">
+                    <svg class="action-icon like-btn" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </div>
+                <div class="feed-caption"><b>${post.user}</b> ${post.caption}</div>
+            `;
+            card.querySelector('.like-btn').onclick = function(){ this.classList.toggle('liked'); };
+            container.appendChild(card);
+        });
+    };
 }
 
-// 修改後的 openTimeline 函式
-function openTimeline(dateStr, photosArray) {
-    timelinePage.classList.add('active'); // 滑入頁面
-    timelineTitle.textContent = dateStr;  // 設定標題 (日期)
-    timelineContent.innerHTML = '';       // 清空舊內容
-
-    // 1. 排序：依時間「由早到晚」排列 (如果要反過來，改成 b.timestamp - a.timestamp)
-    photosArray.sort((a, b) => a.timestamp - b.timestamp);
-
-    // 2. 產生乾淨的照片卡片
-    photosArray.forEach(photo => {
-        const imgUrl = URL.createObjectURL(photo.imageBlob);
-        
-        const item = document.createElement('div');
-        item.classList.add('timeline-item');
-        
-        // 簡化後的 HTML 結構：只有照片卡片 + 下方小小的時間文字
-        item.innerHTML = `
-            <div class="timeline-card">
-                <div class="timeline-img" style="background-image: url('${imgUrl}')"></div>
-                <div class="timeline-caption">
-                    Time: ${photo.time} </div>
-            </div>
-        `;
-        timelineContent.appendChild(item);
-    });
-}
+// 相簿選擇
+const multiInput = document.getElementById('multiPhotoInput');
+if(multiInput) multiInput.onchange = (e) => {
+    finalFiles = Array.from(e.target.files);
+    const preview = document.getElementById('editorPreview');
+    if(finalFiles.length>0) {
+        const url = URL.createObjectURL(finalFiles[0]);
+        preview.style.backgroundImage = `url('${url}')`;
+        preview.innerHTML = '';
+    }
+};
+document.querySelector('.logout-btn').onclick = () => {
+    localStorage.removeItem('isLoggedIn'); window.location.href = 'login.html';
+};
