@@ -99,26 +99,75 @@ body {
 .friend-3 { background-color: #8D6E63; display: flex; align-items: center; justify-content: center; }
 .msg-icon { width: 20px; height: 20px; fill: none; stroke: #F5EBE1; stroke-width: 2; }
 /* =========================================
-   4. UI 元件 (Bars)
+ /* =========================================
+   4. UI 元件 (Bars) - 依照設計圖修正
    ========================================= */
 .top-bar, .bottom-bar {
-    position: fixed; width: var(--card-size); left: 50%; top: 50%; bottom: auto;
-    display: flex; align-items: center; padding: 0 5px; z-index: 100; pointer-events: none;
+    position: fixed; 
+    width: var(--card-size); /* 寬度跟卡片一樣 */
+    left: 50%; top: 50%; bottom: auto;
+    display: flex; align-items: center; 
+    padding: 0; /* 貼齊邊緣 */
+    z-index: 100; pointer-events: none;
     transition: opacity 0.3s;
 }
-.top-bar { justify-content: space-between; margin-top: calc((var(--card-size)/-2) - 45px); transform: translate(-50%, -100%); }
-.bottom-bar { justify-content: center; gap: 60px; margin-top: calc((var(--card-size)/2) + 30px); transform: translate(-50%, 0); }
 
+/* 頂部列：往上推 (卡片高度一半 + 間距) */
+.top-bar { 
+    justify-content: space-between; 
+    margin-top: calc((var(--card-size) / -2) - 60px); 
+    transform: translate(-50%, -100%); 
+}
+
+/* 底部列：往下推 */
+.bottom-bar { 
+    justify-content: center; gap: 60px; 
+    margin-top: calc((var(--card-size) / 2) + 40px); 
+    transform: translate(-50%, 0); 
+}
+
+/* 圓形按鈕容器 (Top & Bottom 共用) */
 .btn-container {
-    width: 44px; height: 44px; background-color: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px);
-    border-radius: 50%; display: flex; justify-content: center; align-items: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); pointer-events: auto; cursor: pointer; transition: transform 0.1s;
+    width: 50px; height: 50px; 
+    border-radius: 50%; 
+    display: flex; justify-content: center; align-items: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); 
+    pointer-events: auto; cursor: pointer; 
+    transition: transform 0.1s;
 }
 .btn-container:active { transform: scale(0.92); }
-.avatar, .notification { width: 55px; height: 55px; background-color: #947867; border-radius: 50%; }
-.shutter-btn { width: 76px; height: 76px; border: 5px solid #F2EBE0; background-color: #947867; border-radius: 50%; box-shadow: 0 0 0 4px #947867 inset; }
-.icon-white i { color: white; } .icon-brown i { color: #8D6E63; }
 
+/* --- 頂部樣式 (實心深褐色) --- */
+.avatar, .notification { 
+    background-color: #947867; /* 實心深褐色 */
+}
+
+/* 中間的長條藥丸 (Search Pill) */
+.search-pill { 
+    width: 120px; height: 50px; 
+    background-color: #947867; /* 實心深褐色 */
+    border-radius: 25px; 
+    display: flex; justify-content: center; align-items: center; 
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    pointer-events: auto; cursor: pointer;
+}
+
+/* --- 底部樣式 (透明背景深色圖示) --- */
+.shutter-btn { 
+    width: 76px; height: 76px; 
+    border: 5px solid #F2EBE0; /* 外圈跟背景色一樣 */
+    background-color: #947867; 
+    border-radius: 50%; 
+    box-shadow: 0 0 0 4px #947867 inset; /* 內圈陰影效果 */
+}
+
+/* 底部左右兩邊的 icon 不需要背景色，只需顏色 */
+.icon-brown {
+    background-color: transparent; 
+    box-shadow: none;
+}
+.icon-brown i { color: #8D6E63; font-size: 32px; font-weight: bold; } /* 放大圖示 */
+.icon-white i { color: white; }
 /* =========================================
    5. 回憶頁面 (Calendar) - 修正網格樣式
    ========================================= */
