@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Search</title>
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { background-color: #F2EBE0; padding: 20px; }
+        
+        .search-header { display: flex; align-items: center; margin-bottom: 20px; margin-top: 10px; }
+        .back-icon { font-size: 28px; color: #5D4037; margin-right: 15px; cursor: pointer; }
+        
+        .search-bar-container {
+            flex: 1;
+            background-color: #e0d4c8;
+            border-radius: 12px;
+            padding: 10px 15px;
+            display: flex; align-items: center;
+        }
+        .search-bar-container input {
+            border: none; background: transparent; outline: none; font-size: 16px; width: 100%; color: #5D4037;
+        }
+        .search-bar-container i { color: #8D6E63; margin-right: 10px; font-size: 20px; }
+
+        .search-content { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+        .explore-item { aspect-ratio: 1; background-color: #ddd; background-size: cover; background-position: center; border-radius: 2px; }
+        /* 假圖 */
+        .img1 { background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'); }
+        .img2 { background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400'); }
+        .img3 { background-image: url('https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400'); }
+        .img4 { background-image: url('https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=400'); grid-row: span 2; grid-column: span 2; }
+    </style>
+</head>
+<body>
+    <div class="search-header">
+        <a href="home.html" style="text-decoration: none;">
+            <i class='bx bx-chevron-left back-icon'></i>
+        </a>
+        <div class="search-bar-container">
+            <i class='bx bx-search'></i>
+            <input type="text" placeholder="Search">
+        </div>
+    </div>
+
+    <div class="search-content">
+        <div class="explore-item img4"></div>
+        <div class="explore-item img1"></div>
+        <div class="explore-item img2"></div>
+        <div class="explore-item img3"></div>
+        <div class="explore-item img1"></div>
+        <div class="explore-item img2"></div>
+        <div class="explore-item img3"></div>
+    </div>
+</body>
+</html>
