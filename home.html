@@ -10,12 +10,26 @@
 <body>
 
     <div class="profile-page" id="profilePage">
-        <div class="back-btn" id="closeProfileBtn"><i class='bx bx-chevron-left' style="font-size: 30px; color: white;"></i></div>
-        <div class="profile-header"><div class="profile-avatar"></div><div class="profile-name">User</div><div class="profile-email">user@example.com</div></div>
-        <div class="profile-menu">
-            <div class="menu-item"><span>My Profile</span></div>
-            <div class="menu-item" id="subscriptionBtn"><span>Subscription</span><span id="vipStatusText" style="margin-left: auto; font-size: 12px; color: #8D6E63;">Free</span></div>
+        <div class="back-btn" id="closeProfileBtn">
+            <i class='bx bx-chevron-left'></i>
         </div>
+
+        <div class="profile-header">
+            <div class="profile-avatar"></div> <div class="profile-name">T T T T T</div>
+            <div class="profile-email">YYYT.gmail.com</div>
+        </div>
+        
+        <div class="profile-menu">
+            <div class="menu-item"><i class='bx bx-user'></i> My Profile</div>
+            <div class="menu-item" id="subscriptionBtn">
+                <i class='bx bx-bell'></i> Subscription
+            </div>
+            <div class="menu-item"><i class='bx bx-map'></i> Address</div>
+            <div class="menu-item"><i class='bx bx-envelope'></i> Contact Us</div>
+            <div class="menu-item"><i class='bx bx-cog'></i> Setting</div>
+            <div class="menu-item"><i class='bx bx-help-circle'></i> Help&QA</div>
+        </div>
+        
         <button class="logout-btn">Log Out</button>
     </div>
 
@@ -51,7 +65,25 @@
         </div>
 
         <div class="page-container" id="page-home">
-            <div class="card"></div>
+            <div class="card">
+                <div class="home-friends-bar">
+                    <div class="friend-wrapper">
+                        <div class="friend-avatar friend-1"></div>
+                    </div>
+                    
+                    <div class="friend-wrapper pill">
+                        <div class="friend-avatar friend-2">
+                            <i class='bx bx-group friend-icon'></i>
+                        </div>
+                    </div>
+                    
+                    <div class="friend-wrapper">
+                        <div class="friend-avatar friend-3">
+                            <i class='bx bx-message-rounded-dots msg-icon'></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="page-container" id="page-community">
@@ -76,7 +108,7 @@
         <div class="btn-container shutter-btn" id="shutterBtn"></div>
         <div class="btn-container icon-brown" id="editBtn"><i class='bx bx-edit' style="font-size: 28px;"></i></div>
     </div>
-
+    
     <input type="file" id="cameraInput" style="display: none;"><input type="file" id="multiPhotoInput" multiple style="display: none;">
     <div class="modal-backdrop" id="backdrop"></div>
     <div class="action-sheet" id="actionSheet">
