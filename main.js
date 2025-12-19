@@ -1,623 +1,404 @@
 // ==========================================
-// 0. 安全性檢查
-// ==========================================
-if (localStorage.getItem('isLoggedIn') !== 'true') {
-    window.location.href = 'login.html';
-}
-
-// ==========================================
-// 1. 全域變數
+// 1. 全域變數與 DOM 元素
 // ==========================================
 const track = document.getElementById('track');
 const topBar = document.getElementById('topBar');
 const bottomBar = document.getElementById('bottomBar');
+
+const profilePage = document.getElementById('profilePage');
+const openProfileBtn = document.getElementById('openProfileBtn');
+const closeProfileBtn = document.getElementById('closeProfileBtn');
+const logoutBtn = document.querySelector('.logout-btn');
+
+const actionSheet = document.getElementById('actionSheet');
+const backdrop = document.getElementById('backdrop');
+const shutterBtn = document.getElementById('shutterBtn');
+
+const takePhotoBtn = document.getElementById('takePhotoBtn');
+const chooseAlbumBtn = document.getElementById('chooseAlbumBtn');
+const cameraInput = document.getElementById('cameraInput');
+const albumInput = document.getElementById('albumInput');
 const card = document.querySelector('.card');
 
-let isVIP = localStorage.getItem('isVIP') === 'true';
+// 狀態變數
+let currentPage = 1;
+let startX = 0; let startY = 0;
+let currentTranslate = -33.333;
+let isDraggingPage = false;
+let startTranslate = 0;
+let isHorizontalMove = false;
+let isDraggingSheet = false;
+let sheetStartY = 0;
+
+// 資料庫變數
 let db;
-const DB_NAME = 'GourmetApp_Final_v18';
-const STORE_PHOTOS = 'photos';
-const STORE_POSTS = 'posts';
-const DB_VERSION = 1;
-
-// 頁面索引：0=Memory, 1=Home, 2=Community
-let currentPage = 1; 
-let startX = 0, startTranslate = -33.333, isDragging = false;
-let displayDate = new Date();
-
-// 編輯器暫存
-let currentEditFiles = [];
-let currentEditLocation = null;
-let currentEditTagged = false;
-let isMultiSelectMode = false;
-let finalFiles = [];
+const DB_NAME = 'GourmetDB';
+const STORE_NAME = 'photos';
 
 // ==========================================
-// 2. 資料庫初始化 & 載入最新照片
+// 2. 初始化資料庫 (IndexedDB)
 // ==========================================
 function initDB() {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(DB_NAME, 1);
+    
+    request.onerror = (e) => console.error("DB Error", e);
+    
     request.onupgradeneeded = (e) => {
         db = e.target.result;
-        if (!db.objectStoreNames.contains(STORE_PHOTOS)) db.createObjectStore(STORE_PHOTOS, { keyPath: 'id', autoIncrement: true });
-        if (!db.objectStoreNames.contains(STORE_POSTS)) db.createObjectStore(STORE_POSTS, { keyPath: 'id', autoIncrement: true });
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME, { keyPath: 'date' });
+        }
     };
+
     request.onsuccess = (e) => {
         db = e.target.result;
-        updateVipUI();
-        
-        // 🔥 關鍵修復：資料庫連線成功後，立刻載入資料
-        loadLatestPhoto(); // 1. 幫主畫面卡片換圖
-        renderCalendar();  // 2. 畫回憶頁面的日曆
-        renderCommunity(); // 3. 畫社群頁面的貼文
+        console.log("資料庫連線成功");
+        // 如果資料庫準備好了，嘗試畫一次日曆 (確保切換頁面時有資料)
+        renderCalendar();
     };
 }
 initDB();
 
-// 🔥 新增函式：載入最新照片到主畫面
-function loadLatestPhoto() {
-    const tx = db.transaction([STORE_PHOTOS], 'readonly');
-    const req = tx.objectStore(STORE_PHOTOS).getAll();
-    req.onsuccess = (e) => {
-        const photos = e.target.result;
-        if (photos && photos.length > 0) {
-            // 找出最新的一張 (timestamp 最大)
-            photos.sort((a, b) => b.timestamp - a.timestamp);
-            const latest = photos[0];
-            if (card && latest.imageBlob) {
-                card.style.backgroundImage = `url('${URL.createObjectURL(latest.imageBlob)}')`;
-            }
-        }
-    };
-}
-
-function updateVipUI() {
-    const bell = document.getElementById('vipBellIcon');
-    const statusText = document.getElementById('vipStatusText');
-    if (isVIP) {
-        if(bell) bell.classList.add('active');
-        if(statusText) statusText.textContent = "Premium";
-    } else {
-        if(bell) bell.classList.remove('active');
-        if(statusText) statusText.textContent = "Free";
-    }
-}
-
 // ==========================================
-// 3. 載入外部頁面 (Memory/Community)
+// 3. 動態載入頁面 & 確保日曆繪製
 // ==========================================
 async function loadExternalPages() {
     try {
-        // 載入回憶頁面 HTML
+        // 載入 Memory
         const memoryRes = await fetch('memory.html');
         if (memoryRes.ok) {
-            const memoryContainer = document.getElementById('page-memory');
-            // 我們把內容包在一個固定容器裡，防止跑版
-            memoryContainer.innerHTML = `
-                <div class="calendar-wrapper">
-                    ${await memoryRes.text()}
-                </div>
-            `;
-            if(db) renderCalendar();
+            const text = await memoryRes.text();
+            const doc = new DOMParser().parseFromString(text, 'text/html');
+            const content = doc.querySelector('.page-content-wrapper');
+            if(content) {
+                const container = document.getElementById('page-memory');
+                container.innerHTML = ''; 
+                container.appendChild(content);
+                
+                // ⚠️ 關鍵修正：HTML 塞進去後，立刻畫日曆
+                console.log("Memory 頁面載入完成，開始繪製日曆...");
+                renderCalendar();
+            }
         }
-        
-        // 社群頁面已經直接寫在 home.html 裡了，所以不需要 fetch community.html
-        // 只要確保資料庫連線後執行 renderCommunity() 即可
 
-    } catch(e) {
-        console.error("載入頁面錯誤:", e);
+        // 載入 Community
+        const communityRes = await fetch('community.html');
+        if (communityRes.ok) {
+            const text = await communityRes.text();
+            const doc = new DOMParser().parseFromString(text, 'text/html');
+            const content = doc.querySelector('.page-content-wrapper');
+            if(content) {
+                const container = document.getElementById('page-community');
+                container.innerHTML = '';
+                container.appendChild(content);
+            }
+        }
+    } catch (error) {
+        console.error('頁面載入失敗:', error);
     }
 }
 loadExternalPages();
 
 // ==========================================
-// 4. 滑動邏輯 (修正版)
+// 4. 繪製日曆核心邏輯 (Render Calendar)
 // ==========================================
-let isHorizontalMove = false;
-let startY = 0;
+async function renderCalendar() {
+    const calendarContainer = document.getElementById('calendarDays');
+    // 如果找不到容器 (HTML還沒載入)，就先離開，等 loadExternalPages 呼叫
+    if (!calendarContainer) return; 
 
-track.addEventListener('mousedown', startDrag);
-track.addEventListener('touchstart', startDrag);
+    calendarContainer.innerHTML = ''; // 清空
 
-function startDrag(e) {
-    // 如果在社群或留言板內滑動，不要觸發換頁
-    if (e.target.closest('.feed-carousel') || e.target.closest('.comment-sheet')) {
-        isDragging = false; return;
-    }
-    isDragging = true; isHorizontalMove = false;
-    startX = e.pageX || e.touches[0].clientX;
-    startY = e.pageY || e.touches[0].clientY;
-    
-    // 重新計算當前偏移量 (基於 300vw 的比例)
-    // Page 0: 0%, Page 1: -33.33%, Page 2: -66.66%
-    startTranslate = -currentPage * 33.3333;
-    track.style.transition = 'none';
-}
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = date.getMonth(); 
 
-window.addEventListener('mousemove', moveDrag);
-window.addEventListener('touchmove', moveDrag, {passive: false});
+    // 設定月份標題
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const title = document.getElementById('calendarMonth');
+    if(title) title.textContent = `${monthNames[month]} ${year}`;
 
-function moveDrag(e) {
-    if(!isDragging) return;
-    const x = e.pageX || e.touches[0].clientX;
-    const y = e.pageY || e.touches[0].clientY;
-    const deltaX = x - startX;
-    const deltaY = y - startY;
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    // 判斷是垂直捲動還是水平翻頁
-    if (!isHorizontalMove) {
-        if (Math.abs(deltaY) > Math.abs(deltaX)) {
-            isDragging = false; // 判定為垂直捲動，取消翻頁
-            return; 
-        } else {
-            isHorizontalMove = true; // 判定為水平翻頁
-        }
+    // 取得資料庫所有照片
+    const photosMap = await getAllPhotosMap();
+
+    // 空白格
+    for (let i = 0; i < firstDay; i++) {
+        calendarContainer.appendChild(document.createElement('div'));
     }
 
-    if (isHorizontalMove) {
-        if(e.cancelable) e.preventDefault();
-        // 轉換像素為百分比 (基於視窗寬度)
-        const percentageDelta = (deltaX / window.innerWidth) * 33.3333;
-        track.style.transform = `translateX(${startTranslate + percentageDelta}%)`;
-    }
-}
+    // 日期格
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayCell = document.createElement('div');
+        dayCell.classList.add('day-cell');
+        dayCell.textContent = day;
 
-window.addEventListener('mouseup', endDrag);
-window.addEventListener('touchend', endDrag);
+        // 組成 YYYY-MM-DD
+        const currentMonthStr = (month + 1).toString().padStart(2, '0');
+        const currentDayStr = day.toString().padStart(2, '0');
+        const dateString = `${year}-${currentMonthStr}-${currentDayStr}`;
 
-function endDrag(e) {
-    if(!isDragging) return;
-    isDragging = false;
-
-    if (isHorizontalMove) {
-        const endX = e.pageX || e.changedTouches[0].clientX;
-        const diff = startX - endX;
-
-        // 向左滑 (下一頁)
-        if (diff > 50 && currentPage < 2) {
-            // VIP 擋截
-            if (currentPage === 1 && !isVIP) {
-                alert("社群功能僅限 Premium 會員使用！\n請至個人頁面訂閱。");
-            } else {
-                currentPage++;
-            }
-        } 
-        // 向右滑 (上一頁)
-        else if (diff < -50 && currentPage > 0) {
-            currentPage--;
-        }
-    }
-    updateCarousel();
-}
-
-function updateCarousel() {
-    track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-    track.style.transform = `translateX(-${currentPage * 33.3333}%)`;
-    
-    // UI 顯示控制
-    const pages = document.querySelectorAll('.page-container');
-    pages.forEach((p, i) => {
-        // 優化效能：只有當前頁面可以點擊
-        p.style.pointerEvents = (i === currentPage) ? 'auto' : 'none';
-    });
-
-    const isHome = currentPage === 1;
-    if(topBar) topBar.style.opacity = isHome ? 1 : 0;
-    if(bottomBar) bottomBar.style.opacity = isHome ? 1 : 0;
-    // 只有主頁才顯示日期
-    const dateDisplay = document.getElementById('dateDisplay');
-    if(dateDisplay) dateDisplay.style.opacity = isHome ? 1 : 0;
-}
-
-// ==========================================
-// 5. 拍照與發布邏輯 (簡化整合)
-// ==========================================
-const publishBtn = document.getElementById('publishBtn');
-if(publishBtn) {
-    publishBtn.addEventListener('click', () => {
-        if(finalFiles.length === 0) { alert("請先選擇照片！"); return; }
-
-        const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
-        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-        const tx = db.transaction([STORE_PHOTOS, STORE_POSTS], 'readwrite');
-        const memoryStore = tx.objectStore(STORE_PHOTOS);
-        const postStore = tx.objectStore(STORE_POSTS);
-
-        // 1. 存入回憶
-        finalFiles.forEach((file, index) => {
-            memoryStore.add({
-                date: todayStr, time: timeStr, imageBlob: file, timestamp: now.getTime() + index
-            });
-        });
-
-        // 2. 存入社群 (僅限 VIP)
-        if(isVIP) {
-            postStore.add({
-                user: "My Account",
-                avatar: "",
-                location: currentEditLocation || "Unknown",
-                images: finalFiles, 
-                likes: 0,
-                caption: currentEditTagged ? "With friends! ❤️" : "New post ✨",
-                timestamp: now.getTime(),
-                isVIP: true
-            });
-        }
-
-        tx.oncomplete = () => {
-            alert(isVIP ? "發佈成功！" : "已存入回憶！");
-            document.getElementById('editorPage').classList.remove('active');
+        // 如果這天有照片
+        if (photosMap[dateString]) {
+            dayCell.classList.add('has-photo');
+            const imgUrl = URL.createObjectURL(photosMap[dateString]);
+            dayCell.style.backgroundImage = `url('${imgUrl}')`;
+            dayCell.textContent = ''; // 有照片就不顯示數字 (或保留看你喜好)
             
-            // 更新所有畫面
-            loadLatestPhoto();
-            renderCalendar();
-            if(isVIP) renderCommunity();
+            // 點擊事件：換首頁圖
+            dayCell.onclick = () => {
+                card.style.backgroundImage = `url('${imgUrl}')`;
+                // 自動滑回首頁
+                currentTranslate = -33.333;
+                currentPage = 1;
+                updateCarousel();
+            };
+        }
+        calendarContainer.appendChild(dayCell);
+    }
+}
+
+function getAllPhotosMap() {
+    return new Promise((resolve) => {
+        if (!db) { resolve({}); return; }
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = (e) => {
+            const results = e.target.result;
+            const map = {};
+            if(results){
+                results.forEach(item => { map[item.date] = item.imageBlob; });
+            }
+            resolve(map);
         };
     });
 }
 
-// ... (編輯器 UI 邏輯保持不變: multiPhotoInput, tagPeopleBtn, etc.) ...
-// 為了節省篇幅，這裡省略編輯器 UI 綁定代碼，請保留您原本有的部分，
-// 或是確認上一版提供的代碼中這部分是完整的。
-// 重點是上面的 publishBtn 和 loadLatestPhoto 邏輯。
-
 // ==========================================
-// 6. 渲染社群 (假資料 + 真資料)
+// 5. 圖片處理 (存入 DB + 預覽)
 // ==========================================
-function renderCommunity() {
-    const container = document.getElementById('feedContainer');
-    if(!container || !db) return;
+function handleImageUpload(file) {
+    if (!file) return;
 
-    const tx = db.transaction([STORE_POSTS], 'readonly');
-    const req = tx.objectStore(STORE_POSTS).getAll();
+    // 1. 預覽
+    const imageURL = URL.createObjectURL(file);
+    card.style.backgroundImage = `url('${imageURL}')`;
 
-    req.onsuccess = (e) => {
-        let posts = e.target.result;
-        container.innerHTML = ''; 
-
-        if(posts.length === 0) {
-            posts = [
-                { user: "Foodie_Alex", location: "Tokyo", likes: 120, caption: "Ramen! 🍜", fakeImage: "https://images.unsplash.com/photo-1569937724357-19506772436f?w=600&q=80" },
-                { user: "Jessica", location: "Paris", likes: 85, caption: "Croissant 🥐", fakeImage: "https://images.unsplash.com/photo-1555507036-ab1f40388085?w=600&q=80" },
-                { user: "CoffeeLover", location: "Taipei", likes: 200, caption: "Coffee ☕️", fakeImage: "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=600&q=80" }
-            ];
-        } else {
-            posts.sort((a,b) => b.timestamp - a.timestamp);
-        }
-
-        posts.forEach(post => {
-            // 圖片處理邏輯
-            const images = post.images || [post.imageBlob];
-            let slidesHtml = '';
-            if (post.fakeImage) {
-                slidesHtml = `<div class="feed-image" style="background-image: url('${post.fakeImage}')"></div>`;
-            } else if (images && images.length > 0) {
-                images.forEach(blob => {
-                    if(blob) slidesHtml += `<div class="feed-image" style="background-image: url('${URL.createObjectURL(blob)}')"></div>`;
-                });
-            }
-            const counterHtml = (images.length > 1 && !post.fakeImage) ? `<div class="feed-counter">1/${images.length}</div>` : '';
-
-            const card = document.createElement('div');
-            card.className = 'feed-card';
-            card.innerHTML = `
-                <div class="feed-header">
-                    <div class="feed-user-info">
-                        <div class="feed-avatar"></div>
-                        <div>
-                            <div class="feed-username">${post.user} ${post.isVIP ? "<i class='bx bxs-bell-ring' style='color:#ED4956;font-size:14px;'></i>" : ""}</div>
-                            <div class="feed-location">${post.location || 'Unknown'}</div>
-                        </div>
-                    </div>
-                    <i class='bx bx-dots-horizontal-rounded' style="font-size:24px;"></i>
-                </div>
-                <div style="position: relative;">
-                    <div class="feed-carousel" onscroll="updateCounter(this)">${slidesHtml}</div>
-                    ${counterHtml}
-                </div>
-                <div class="feed-actions">
-                    <svg class="action-icon like-btn" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    <svg class="action-icon comment-btn" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                    <i class='bx bx-send' style="font-size:26px; margin-left:auto;"></i>
-                </div>
-                <div class="feed-likes">Liked by <b>foodie</b> and <b>${(post.likes||0)+120} others</b></div>
-                <div class="feed-caption"><span class="caption-username">${post.user}</span> ${post.caption||''}</div>
-                <div class="view-comments">View all comments</div>
-            `;
-            
-            card.querySelector('.like-btn').onclick = function() { this.classList.toggle('liked'); };
-            container.appendChild(card);
-        });
-    };
-}
-
-// 輔助函式：更新計數器
-window.updateCounter = function(carousel) {
-    const width = carousel.offsetWidth;
-    const idx = Math.round(carousel.scrollLeft / width) + 1;
-    const counter = carousel.parentElement.querySelector('.feed-counter');
-    if (counter) counter.textContent = `${idx}/${carousel.children.length}`;
-};
-
-function openCommentSheet(post) {
-    let sheet = document.getElementById('commentSheet');
-    if(!sheet) {
-        sheet = document.createElement('div'); sheet.id = 'commentSheet'; sheet.className = 'comment-sheet';
-        const bd = document.createElement('div'); bd.id = 'commentBackdrop';
-        bd.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:500;opacity:0;pointer-events:none;transition:opacity 0.3s;';
-        document.body.appendChild(bd);
-        
-        sheet.innerHTML = `
-            <div class="comment-header">Comments <div class="close-comment-btn">&times;</div></div>
-            <div class="comment-list" id="commentList"></div>
-            <div class="comment-input-area">
-                <div class="feed-avatar" style="width:32px;height:32px;margin-right:10px;"></div>
-                <input type="text" class="comment-input" placeholder="Add a comment..." id="newCommentInput">
-                <div class="comment-send-btn" onclick="window.sendComment()">Post</div>
-            </div>
-        `;
-        document.body.appendChild(sheet);
-        
-        const close = () => { sheet.classList.remove('active'); bd.style.opacity='0'; bd.style.pointerEvents='none'; };
-        sheet.querySelector('.close-comment-btn').onclick = close; bd.onclick = close;
-    }
-
-    const list = document.getElementById('commentList'); list.innerHTML = '';
+    // 2. 存入 DB
+    if (!db) return;
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     
-    if(post.caption) {
-        const item = document.createElement('div'); item.className='comment-item';
-        item.innerHTML = `<div class="comment-avatar"></div><div class="comment-content"><span class="comment-user">${post.user}</span> ${post.caption}<div class="comment-time">1h</div></div>`;
-        list.appendChild(item);
-    }
-
-    const bd = document.getElementById('commentBackdrop');
-    setTimeout(() => { bd.style.opacity='1'; bd.style.pointerEvents='auto'; sheet.classList.add('active'); }, 10);
-}
-
-window.sendComment = function() {
-    const inp = document.getElementById('newCommentInput');
-    const list = document.getElementById('commentList');
-    if(inp && inp.value.trim() !== '') {
-        const item = document.createElement('div'); item.className='comment-item';
-        item.innerHTML = `<div class="comment-avatar"></div><div class="comment-content"><span class="comment-user">Me</span> ${inp.value}<div class="comment-time">Just now</div></div>`;
-        list.appendChild(item); inp.value=''; list.scrollTop = list.scrollHeight;
-    }
-};
-
-// ==========================================
-// 7. 回憶與日曆邏輯 (Memory & Calendar)
-// ==========================================
-async function renderCalendar() {
-    const container = document.getElementById('calendarDays');
-    if (!container) return;
-    const tx = db.transaction([STORE_PHOTOS], 'readonly');
-    const req = tx.objectStore(STORE_PHOTOS).getAll();
-    req.onsuccess = (e) => {
-        const allPhotos = e.target.result;
-        const grouped = {};
-        allPhotos.forEach(p => { if(!grouped[p.date]) grouped[p.date]=[]; grouped[p.date].push(p); });
-
-        container.innerHTML = '';
-        const newContainer = container.cloneNode(true);
-        container.parentNode.replaceChild(newContainer, container);
-        const activeContainer = document.getElementById('calendarDays');
-
-        const year = displayDate.getFullYear(), month = displayDate.getMonth();
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        
-        if (!document.getElementById('calControls')) {
-            const header = document.getElementById('calendarMonth').parentNode;
-            const controls = document.createElement('div');
-            controls.id = 'calControls'; controls.className = 'calendar-controls';
-            controls.innerHTML = `<button class="month-nav-btn" id="prevMonthBtn">&lt;</button><span id="currentMonthLabel" style="font-size:18px;font-weight:600;">${monthNames[month]} ${year}</span><button class="month-nav-btn" id="nextMonthBtn">&gt;</button>`;
-            document.getElementById('calendarMonth').style.display = 'none';
-            header.appendChild(controls);
-            document.getElementById('prevMonthBtn').onclick = () => changeMonth(-1);
-            document.getElementById('nextMonthBtn').onclick = () => changeMonth(1);
-        } else {
-            document.getElementById('currentMonthLabel').textContent = `${monthNames[month]} ${year}`;
-        }
-
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-        for(let i=0; i<firstDay; i++) activeContainer.appendChild(document.createElement('div'));
-        for(let d=1; d<=daysInMonth; d++) {
-            const cell = document.createElement('div'); cell.className = 'day-cell'; cell.textContent = d;
-            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            if(grouped[dateStr] && grouped[dateStr].length > 0) {
-                cell.classList.add('has-photo');
-                const sorted = grouped[dateStr].sort((a,b) => b.timestamp - a.timestamp);
-                cell.style.backgroundImage = `url('${URL.createObjectURL(sorted[0].imageBlob)}')`;
-                cell.textContent = '';
-                cell.dataset.date = dateStr;
-            }
-            activeContainer.appendChild(cell);
-        }
-        activeContainer.addEventListener('click', (e) => {
-            const cell = e.target.closest('.day-cell');
-            if(cell && cell.classList.contains('has-photo')) openStoryMode(cell.dataset.date, grouped[cell.dataset.date]);
-        });
-    };
-}
-function changeMonth(offset) { displayDate.setMonth(displayDate.getMonth() + offset); renderCalendar(); }
-
-function openStoryMode(dateStr, photos) {
-    let page = document.getElementById('storyPage');
-    if(!page) {
-        page = document.createElement('div'); page.id = 'storyPage';
-        Object.assign(page.style, { position:'fixed', top:'0', left:'0', width:'100%', height:'100%', backgroundColor:'#000', zIndex:'9999', transform:'translateY(100%)', transition:'transform 0.3s cubic-bezier(0.4,0,0.2,1)', display:'flex', flexDirection:'column' });
-        page.innerHTML = `<div id="storyContent" style="width:100%; height:100%; position:relative;"></div><div id="storyProgressBar" class="story-progress-bar"></div>`;
-        document.body.appendChild(page);
-        
-        let startY = 0;
-        page.addEventListener('touchstart', (e)=>startY=e.touches[0].clientY, {passive:true});
-        page.addEventListener('touchend', (e)=>{ if(e.changedTouches[0].clientY - startY > 80) page.style.transform='translateY(100%)'; });
-    }
-    
-    photos.sort((a,b) => a.timestamp - b.timestamp);
-    let idx = 0;
-    const bar = document.getElementById('storyProgressBar');
-    const player = document.getElementById('storyContent');
-    
-    bar.innerHTML = '';
-    for(let i=0; i<photos.length; i++) {
-        const seg = document.createElement('div'); seg.className='progress-segment'; bar.appendChild(seg);
-    }
-    const segs = bar.getElementsByClassName('progress-segment');
-    function updateBar(c) {
-        for(let i=0; i<segs.length; i++) segs[i].style.backgroundColor = i<=c ? (i==c?'rgba(255,255,255,1)':'rgba(255,255,255,1)') : 'rgba(255,255,255,0.3)';
-    }
-
-    function show() {
-        if(idx>=photos.length) { page.style.transform='translateY(100%)'; return; }
-        if(idx<0) idx=0;
-        const url = URL.createObjectURL(photos[idx].imageBlob);
-        player.innerHTML = `<div class="story-img-box" style="background-image:url('${url}'); width:100%; height:100%;"></div><div style="position:absolute;top:0;left:0;width:50%;height:100%;z-index:20;" onclick="event.stopPropagation(); window.storyPrev()"></div><div style="position:absolute;top:0;right:0;width:50%;height:100%;z-index:20;" onclick="event.stopPropagation(); window.storyNext()"></div>`;
-        updateBar(idx);
-    }
-    window.storyPrev = () => { idx--; show(); };
-    window.storyNext = () => { idx++; show(); };
-    
-    setTimeout(() => { page.style.transform='translateY(0)'; show(); }, 10);
-}
-
-function closeSheet() {
-    if(actionSheet && backdrop) {
-        actionSheet.style.transform = 'translateY(100%)';
-        backdrop.classList.remove('active');
-    }
-}
-const backdrop = document.getElementById('backdrop');
-const actionSheet = document.getElementById('actionSheet');
-
-if(shutterBtn) shutterBtn.addEventListener('click', () => {
-    actionSheet.style.transform = 'translateY(0)';
-    backdrop.classList.add('active');
-});
-if(backdrop) backdrop.addEventListener('click', closeSheet);
-
-const camInput = document.getElementById('cameraInput');
-const albInput = document.getElementById('albumInput');
-if(document.getElementById('takePhotoBtn')) document.getElementById('takePhotoBtn').onclick = () => { closeSheet(); setTimeout(() => camInput.click(), 100); };
-if(document.getElementById('chooseAlbumBtn')) document.getElementById('chooseAlbumBtn').onclick = () => { closeSheet(); setTimeout(() => albInput.click(), 100); };
-
-if(camInput) camInput.onchange = (e) => simpleSave(e.target.files);
-if(albInput) albInput.onchange = (e) => simpleSave(e.target.files);
-
-function simpleSave(files) {
-    if(!files.length) return;
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const tx = db.transaction([STORE_PHOTOS], 'readwrite');
-    Array.from(files).forEach((f, i) => {
-        tx.objectStore(STORE_PHOTOS).add({
-            date: today, time: new Date().toLocaleTimeString(), imageBlob: f, timestamp: now.getTime() + i
-        });
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.put({
+        date: today,
+        imageBlob: file
     });
-    tx.oncomplete = () => {
-        if(card) card.style.backgroundImage = `url('${URL.createObjectURL(files[0])}')`;
-        renderCalendar();
-        alert("照片已存入回憶！");
+
+    request.onsuccess = () => {
+        console.log("照片已存檔:", today);
+        renderCalendar(); // 存完後立刻重畫日曆
+        alert("照片已記錄到今天的回憶中！");
     };
 }
 
-// ==========================================
-// 8. 滑動邏輯與頁面切換
-// ==========================================
-let startY = 0; 
-let isHorizontalMove = false;
 
-track.addEventListener('mousedown', startDrag);
-track.addEventListener('touchstart', startDrag);
+// ==========================================
+// 6. 滑動與 UI 互動邏輯 (保持原本)
+// ==========================================
+track.addEventListener('mousedown', pageDragStart);
+track.addEventListener('touchstart', pageDragStart);
 
-function startDrag(e) { 
-    if (e.target.closest('.feed-carousel') || e.target.closest('.comment-sheet')) {
-        isDragging = false; return;
-    }
-    isDragging = true; isHorizontalMove = false; 
-    startX = e.pageX || e.touches[0].clientX; 
-    startY = e.pageY || e.touches[0].clientY;
-    startTranslate = -currentPage * 33.333; 
+function pageDragStart(e) {
+    if (isDraggingSheet) return;
+    isDraggingPage = true; 
+    isHorizontalMove = false;
+    startX = getX(e); startY = getY(e);
+    startTranslate = -currentPage * 33.333;
     track.style.transition = 'none';
+    window.addEventListener('mousemove', pageDragMove);
+    window.addEventListener('touchmove', pageDragMove, {passive: false});
+    window.addEventListener('mouseup', pageDragEnd);
+    window.addEventListener('touchend', pageDragEnd);
 }
 
-window.addEventListener('mousemove', moveDrag);
-window.addEventListener('touchmove', moveDrag, {passive: false});
-
-function moveDrag(e) {
-    if(!isDragging) return;
-    const x = e.pageX || e.touches[0].clientX;
-    const y = e.pageY || e.touches[0].clientY;
-    const deltaX = x - startX;
-    const deltaY = y - startY;
-
-    if (!isHorizontalMove) {
-        if (Math.abs(deltaY) > Math.abs(deltaX)) { isDragging = false; return; } 
-        else { isHorizontalMove = true; }
+function pageDragMove(e) {
+    if (!isDraggingPage) return;
+    const currentX = getX(e); const currentY = getY(e);
+    const deltaX = currentX - startX; const deltaY = currentY - startY;
+    if (!isHorizontalMove && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
+        if (Math.abs(deltaX) > Math.abs(deltaY)) isHorizontalMove = true;
+        else { isDraggingPage = false; pageDragEnd(e); return; }
     }
-
     if (isHorizontalMove) {
         if(e.cancelable) e.preventDefault(); 
-        track.style.transform = `translateX(${startTranslate + (deltaX/window.innerWidth)*33.333}%)`;
+        const screenWidth = window.innerWidth;
+        const movePercent = (deltaX / screenWidth) * 33.333;
+        let nextTranslate = startTranslate + movePercent;
+        if (nextTranslate > 0 || nextTranslate < -66.666) nextTranslate = startTranslate + (movePercent * 0.3);
+        currentTranslate = nextTranslate;
+        track.style.transform = `translateX(${currentTranslate}%)`;
     }
 }
 
-window.addEventListener('mouseup', endDrag);
-window.addEventListener('touchend', endDrag);
+function pageDragEnd(e) {
+    if (!isDraggingPage && !isHorizontalMove) { cleanupPageDrag(); return; }
+    isDraggingPage = false;
+    const movedBy = currentTranslate - startTranslate;
+    const threshold = 5; 
+    if (movedBy < -threshold && currentPage < 2) currentPage++; 
+    else if (movedBy > threshold && currentPage > 0) currentPage--; 
+    updateCarousel();
+    cleanupPageDrag();
+}
 
-function endDrag(e) { 
-    if(!isDragging) return; 
-    isDragging = false; 
-    
-    if (isHorizontalMove) {
-        const endX = e.pageX || e.changedTouches[0].clientX; 
-        
-        // 向左滑 (下一頁)
-        if (startX - endX > 50 && currentPage < 2) {
-            // 🔥 關鍵 VIP 擋下邏輯 🔥
-            // 如果要進入社群頁 (Page 2) 且 不是 VIP
-            if (currentPage === 1 && !isVIP) {
-                alert("社群功能僅限 Premium 會員使用！\n請至個人頁面訂閱。");
-                updateCarousel(); // 彈回原位
-                return;
-            }
-            currentPage++;
-        } 
-        // 向右滑 (上一頁)
-        else if (endX - startX > 50 && currentPage > 0) {
-            currentPage--;
-        }
-        
-        updateCarousel(); 
-    } else {
-        updateCarousel();
-    }
+function cleanupPageDrag() {
+    window.removeEventListener('mousemove', pageDragMove);
+    window.removeEventListener('touchmove', pageDragMove);
+    window.removeEventListener('mouseup', pageDragEnd);
+    window.removeEventListener('touchend', pageDragEnd);
 }
 
 function updateCarousel() {
     track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
     track.style.transform = `translateX(-${currentPage * 33.333}%)`;
-    const pages = document.querySelectorAll('.page-container');
-    pages.forEach((p, i) => {
-        p.style.visibility = (i===currentPage)?'visible':'hidden';
-        p.style.pointerEvents = (i===currentPage)?'auto':'none';
-    });
-    const isHome = currentPage === 1;
-    if(topBar) topBar.style.opacity = isHome ? 1 : 0;
-    if(bottomBar) bottomBar.style.opacity = isHome ? 1 : 0;
+    const isHome = (currentPage === 1);
+    topBar.style.opacity = isHome ? '1' : '0';
+    bottomBar.style.opacity = isHome ? '1' : '0';
+    topBar.style.pointerEvents = isHome ? 'auto' : 'none';
+    bottomBar.style.pointerEvents = isHome ? 'auto' : 'none';
 }
 
-// ==========================================
-// 9. 全域按鈕事件 (Profile, Logout)
-// ==========================================
-if(document.getElementById('openProfileBtn')) document.getElementById('openProfileBtn').addEventListener('click', () => document.getElementById('profilePage').classList.add('active'));
-if(document.getElementById('closeProfileBtn')) document.getElementById('closeProfileBtn').addEventListener('click', () => document.getElementById('profilePage').classList.remove('active'));
+// Action Sheet & Profile
+openProfileBtn.addEventListener('click', () => profilePage.classList.add('active'));
+closeProfileBtn.addEventListener('click', () => profilePage.classList.remove('active'));
+logoutBtn.addEventListener('click', () => alert('Log out clicked'));
 
-if(document.querySelector('.logout-btn')) document.querySelector('.logout-btn').addEventListener('click', () => {
-    localStorage.removeItem('isLoggedIn');
-    // localStorage.removeItem('isVIP'); // 可選：保留 VIP 狀態
-    window.location.href = 'login.html';
+shutterBtn.addEventListener('click', () => {
+    actionSheet.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    actionSheet.style.transform = 'translateY(0)';
+    backdrop.classList.add('active');
 });
+backdrop.addEventListener('click', () => {
+    actionSheet.style.transition = 'transform 0.3s ease-out';
+    actionSheet.style.transform = 'translateY(100%)';
+    backdrop.classList.remove('active');
+});
+
+// Camera Inputs
+takePhotoBtn.addEventListener('click', () => { backdrop.click(); cameraInput.click(); });
+cameraInput.addEventListener('change', (e) => handleImageUpload(e.target.files[0]));
+chooseAlbumBtn.addEventListener('click', () => { backdrop.click(); albumInput.click(); });
+albumInput.addEventListener('change', (e) => handleImageUpload(e.target.files[0]));
+
+function getX(e) { return e.type.includes('mouse') ? e.pageX : e.touches[0].clientX; }
+function getY(e) { return e.type.includes('mouse') ? e.pageY : e.touches[0].clientY; }
+
+// ==========================================
+// 9. 編輯貼文邏輯 (支援真實多圖匯入)
+// ==========================================
+
+const editBtn = document.getElementById('editBtn');
+const editorPage = document.getElementById('editorPage');
+const closeEditorBtn = document.getElementById('closeEditorBtn');
+const galleryGrid = document.getElementById('galleryGrid');
+const editorPreview = document.getElementById('editorPreview');
+const multiPhotoInput = document.getElementById('multiPhotoInput'); // 新增的多選 input
+
+// 1. 開啟編輯頁面
+editBtn.addEventListener('click', () => {
+    editorPage.classList.add('active');
+    
+    // 如果圖庫是空的 (只有那個相機按鈕)，就自動觸發選照片
+    // 這樣使用者體驗會很像「一點進來就讓你選照片」
+    if(galleryGrid.children.length <= 1) {
+        setTimeout(() => {
+            if(confirm("要從相簿匯入照片到編輯區嗎？")) {
+                multiPhotoInput.click();
+            }
+        }, 300);
+    }
+});
+
+closeEditorBtn.addEventListener('click', () => {
+    editorPage.classList.remove('active');
+});
+
+// 2. 監聽「真實圖庫按鈕」 (那個第一格相機 icon)
+// 原本的 id 是 realGalleryBtn，我們沿用它來觸發多選
+const realGalleryBtn = document.getElementById('realGalleryBtn');
+if(realGalleryBtn) {
+    realGalleryBtn.addEventListener('click', () => {
+        multiPhotoInput.click();
+    });
+}
+
+// 3. 當使用者選了多張照片後 (核心邏輯)
+multiPhotoInput.addEventListener('change', (e) => {
+    const files = e.target.files;
+    
+    if (files && files.length > 0) {
+        // 先把第一張設為大圖預覽
+        const firstImgUrl = URL.createObjectURL(files[0]);
+        editorPreview.style.backgroundImage = `url('${firstImgUrl}')`;
+
+        // 開始把照片一張張塞入下方格子
+        // 注意：我們保留第一個按鈕 (realGalleryBtn)，把新照片加在後面
+        Array.from(files).forEach((file) => {
+            renderPhotoToGrid(file);
+        });
+    }
+});
+
+// 輔助函式：把單張照片檔案畫到格子上
+function renderPhotoToGrid(file) {
+    const div = document.createElement('div');
+    div.classList.add('gallery-item');
+    
+    // 建立預覽連結
+    const imgUrl = URL.createObjectURL(file);
+    div.style.backgroundImage = `url('${imgUrl}')`;
+    
+    // 點擊事件：換上方大圖
+    div.addEventListener('click', () => {
+        // 移除其他人的選中狀態
+        document.querySelectorAll('.gallery-item').forEach(el => el.classList.remove('selected'));
+        // 自己變選中
+        div.classList.add('selected');
+        // 換大圖
+        editorPreview.style.backgroundImage = `url('${imgUrl}')`;
+    });
+
+    galleryGrid.appendChild(div);
+}
+
+// 修改後的 openTimeline 函式
+function openTimeline(dateStr, photosArray) {
+    timelinePage.classList.add('active'); // 滑入頁面
+    timelineTitle.textContent = dateStr;  // 設定標題 (日期)
+    timelineContent.innerHTML = '';       // 清空舊內容
+
+    // 1. 排序：依時間「由早到晚」排列 (如果要反過來，改成 b.timestamp - a.timestamp)
+    photosArray.sort((a, b) => a.timestamp - b.timestamp);
+
+    // 2. 產生乾淨的照片卡片
+    photosArray.forEach(photo => {
+        const imgUrl = URL.createObjectURL(photo.imageBlob);
+        
+        const item = document.createElement('div');
+        item.classList.add('timeline-item');
+        
+        // 簡化後的 HTML 結構：只有照片卡片 + 下方小小的時間文字
+        item.innerHTML = `
+            <div class="timeline-card">
+                <div class="timeline-img" style="background-image: url('${imgUrl}')"></div>
+                <div class="timeline-caption">
+                    Time: ${photo.time} </div>
+            </div>
+        `;
+        timelineContent.appendChild(item);
+    });
+}
