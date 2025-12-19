@@ -205,3 +205,63 @@ body {
 .input-field { width: 100%; border: none; outline: none; background: transparent; }
 .pay-btn { margin-top: auto; margin-bottom: 30px; background-color: #D7CCC8; color: white; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
 .payment-close { position: absolute; top: 50px; right: 20px; color: white; font-size: 24px; cursor: pointer; }
+
+/* --- 日曆樣式 (Memory) --- */
+.calendar-container { width: 90%; max-width: 350px; margin: 0 auto; }
+.weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 13px; font-weight: 600; color: #8D6E63; margin-bottom: 15px; }
+.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; row-gap: 20px; }
+
+/* 日期圓圈 */
+.day-cell {
+    width: 100%; aspect-ratio: 1/1; 
+    display: flex; justify-content: center; align-items: center;
+    font-size: 16px; color: #9E9E9E; border-radius: 50%; 
+    position: relative; font-weight: 500;
+}
+
+/* 有照片的日子 */
+.day-cell.has-photo {
+    background-size: cover; background-position: center;
+    color: white; /* 蓋在照片上的日期字變白 */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    border: 2px solid #fff;
+}
+
+/* 月份切換按鈕 (JS 生成) */
+.calendar-controls { display: flex; justify-content: center; align-items: center; gap: 20px; }
+.month-nav-btn { background: none; border: none; font-size: 20px; color: #8D6E63; cursor: pointer; padding: 5px 10px; }
+
+/* --- Story Mode (仿 IG 限動) --- */
+#storyPage {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #000; z-index: 9999;
+    display: flex; flex-direction: column;
+    transform: translateY(100%); /* 預設隱藏 */
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* 進度條容器 */
+.story-progress-bar {
+    position: absolute; top: 50px; left: 10px; right: 10px;
+    display: flex; gap: 5px; z-index: 10000; height: 3px;
+}
+.progress-segment {
+    flex: 1; height: 100%; background-color: rgba(255,255,255,0.3); border-radius: 2px;
+}
+.progress-segment.active { background-color: #fff; }
+
+/* 圖片顯示區 */
+.story-img-box {
+    width: 100%; height: 100%;
+    background-size: contain; background-repeat: no-repeat; background-position: center;
+}
+
+/* 點擊區域 (左/右) */
+.story-touch-left, .story-touch-right {
+    position: absolute; top: 0; height: 100%; width: 30%; z-index: 9999;
+}
+.story-touch-left { left: 0; }
+.story-touch-right { right: 0; }
